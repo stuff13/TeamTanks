@@ -4,8 +4,8 @@ using System.Collections;
 public class PCPlayerController : MonoBehaviour
 {
 
-    [SerializeField] private float speed = 2.0f;
-    [SerializeField] private float rotationSpeed = 2.0f;
+    [SerializeField] private float speed = 10.0f;
+    [SerializeField] private float rotationSpeed = 20.0f;
 	// Use this for initialization
 	void Start () {
 	
@@ -26,5 +26,9 @@ public class PCPlayerController : MonoBehaviour
 	    {
 	        transform.Rotate(Vector3.up * rotation * rotationSpeed * Time.deltaTime);
 	    }
+
+        // figure out movement
+        // report it to network manager
+        // move player
 	}
 }
