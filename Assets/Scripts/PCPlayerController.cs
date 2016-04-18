@@ -5,29 +5,52 @@ public class PCPlayerController : MonoBehaviour
 
     [SerializeField] private float speed = 10.0f;
     [SerializeField] private float rotationSpeed = 20.0f;
-	// Use this for initialization
-	void Start () {
-	
-	}
-	
-	// Update is called once per frame
+    [SerializeField] private GameObject gun = null;
+    [SerializeField] private float gunSpeed = 5.0f;
+
+    private float _baseTime = 0.0f;
+
 	void Update ()
 	{
-	    float movement = Input.GetAxis("Forward");
-	    float rotation = Input.GetAxis("Right");
-
-        if ( movement != 0.0f)
+	    if (GameManager.IsServer)
 	    {
-	        transform.position += transform.forward * movement * speed * Time.deltaTime;
-	    }
+	        float movement = Input.GetAxis("Forward");
+	        float rotation = Input.GetAxis("Right");
 
-	    if (rotation != 0.0f)
+	        if (movement != 0.0f)
+	        {
+	            transform.position += transform.forward * movement * speed * Time.deltaTime;
+	        }
+
+	        if (rotation != 0.0f)
+	        {
+	            transform.Rotate(Vector3.up * rotation * rotationSpeed * Time.deltaTime);
+	        }
+
+	        // figure out movement
+	        // report it to network manager
+	        // move player
+	    }
+	    else
 	    {
-	        transform.Rotate(Vector3.up * rotation * rotationSpeed * Time.deltaTime);
-	    }
+            var targetQ = Quaternion.LookRotation(GameManager.Instance.Head.Gaze.direction);
+            gun.transform.rotation = Quaternion.Slerp(gun.transform.rotation, targetQ, Time.deltaTime * gunSpeed);
+        }
+    }
 
-        // figure out movement
-        // report it to network manager
-        // move player
-	}
+    void FixedUpdate()
+    {
+        if (Time.deltaTime - _baseTime > 0.1)
+        {
+            _baseTime += 0.1f;
+            if (GameManager.IsServer)
+            {
+                NetworkController.Instance.UpdateObjectLocations(gameObject);
+            }
+            else
+            {
+                NetworkController.Instance.UpdateObjectLocations(gun);
+            }
+        }
+    }
 }
