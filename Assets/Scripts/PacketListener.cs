@@ -10,6 +10,8 @@ using System.ComponentModel;
 public class PacketListener
 {
     private volatile bool _keepListeningForClients = true;
+	private const string _serverAddress = "192.168.0.6";
+	private const int _port = 11000;
 
     public PacketListener()
     {
@@ -36,8 +38,8 @@ public class PacketListener
         var bytes = new byte[1024];
 
         // Establish the local endpoint for the socket.
-        IPAddress ipAddress = IPAddress.Parse("192.168.0.6");
-        IPEndPoint localEndPoint = new IPEndPoint(ipAddress, 11000);
+		IPAddress ipAddress = IPAddress.Parse(_serverAddress);
+		IPEndPoint localEndPoint = new IPEndPoint(ipAddress, _port);
         EndPoint senderRemote = localEndPoint;
         Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 

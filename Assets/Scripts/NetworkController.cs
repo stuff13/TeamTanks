@@ -20,6 +20,10 @@ public class NetworkController : MonoBehaviour
 	    {
             new PacketListener();
         }
+        else
+        {
+        	new PacketSender();
+        }
     }
 	
 	// Update is called once per frame
