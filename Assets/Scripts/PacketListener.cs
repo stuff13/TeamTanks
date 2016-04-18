@@ -7,16 +7,20 @@ using System.Text;
 using System.Threading;
 using System.ComponentModel;
 
-public class PacketListener
+public class PacketListener : IDisposable
 {
     private volatile bool _keepListeningForClients = true;
 	private const string _serverAddress = "192.168.0.6";
 	private const int _port = 11000;
 
+    private BackgroundWorker listenerThread;
+
+    private Socket socket;
+
     public PacketListener()
     {
         // create thread
-        var listenerThread = new BackgroundWorker();
+        listenerThread = new BackgroundWorker();
         listenerThread.DoWork += Listen;
         listenerThread.WorkerReportsProgress = true;
         listenerThread.ProgressChanged += ProgressMessage;
@@ -41,24 +45,22 @@ public class PacketListener
 		IPAddress ipAddress = IPAddress.Parse(_serverAddress);
 		IPEndPoint localEndPoint = new IPEndPoint(ipAddress, _port);
         EndPoint senderRemote = localEndPoint;
-        Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+        socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 
         try
         {
             socket.Bind(localEndPoint);
-
+            socket.Blocking = false;
             while (_keepListeningForClients)
             {
-                Debug.Log("Waiting to receive datagrams from client...");
-                Debug.Log("Waiting to receive datagrams from client...");
+                 if (socket.Poll(1000, SelectMode.SelectRead))
+                {
+                    socket.ReceiveFrom(bytes, ref senderRemote);
 
-                // Start an asynchronous socket to listen for connections.
-                socket.ReceiveFrom(bytes, ref senderRemote);
-
-                Debug.Log("Received message from client. Decoding...");
-                String message = Encoding.Default.GetString(bytes);
-                if (worker != null)
-                    worker.ReportProgress(0, message);
+                    Debug.Log("Received message from client. Decoding...");
+                    String message = Encoding.Default.GetString(bytes);
+                    if (worker != null) worker.ReportProgress(0, message);
+                }
             }
 
         }
@@ -68,7 +70,6 @@ public class PacketListener
         }
         finally
         {
-            socket.Shutdown(SocketShutdown.Both);
             socket.Close();
         }
     }
@@ -78,12 +79,8 @@ public class PacketListener
         _keepListeningForClients = false;
     }
 
-    //public static int Main(String[] args)
-    //{
-    //    var listener = new SocketListener();
-
-    //    Console.WriteLine("\nPress ENTER to continue...");
-    //    Console.Read();
-    //    return 0;
-    //}
+    public void Dispose()
+    {
+        RequestStopListening();
+    }
 }

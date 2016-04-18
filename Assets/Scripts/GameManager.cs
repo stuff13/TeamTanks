@@ -26,17 +26,22 @@ public class GameManager : MonoBehaviour
 		}
 
 		Debug.Log(SystemInfo.operatingSystem);
-		if(SystemInfo.operatingSystem.Contains("Windows"))
-		{
-			mainCamera.SetActive(true);
-		}
-		else
-		{
-			Cardboard.Create();
-			turretCamera.SetActive(true);
-			head = turretCamera.GetComponent<StereoController>().Head;
-			onApple = true;
-		}
+	    onApple = !SystemInfo.operatingSystem.Contains("Windows");
+
+	    if (onApple)
+	    {
+	        Cardboard.Create();
+	        turretCamera.SetActive(true);
+	        mainCamera.SetActive(false);
+	        head = turretCamera.GetComponent<StereoController>().Head;
+	        GetComponent<Cardboard>().VRModeEnabled = true;
+	    }
+	    else
+	    {
+	        mainCamera.SetActive(true);
+	        turretCamera.SetActive(false);
+	        GetComponent<Cardboard>().VRModeEnabled = false;
+	    }
 	}
 
 	void Update () 
@@ -47,4 +52,5 @@ public class GameManager : MonoBehaviour
 			gun.transform.rotation = Quaternion.Slerp(gun.transform.rotation, targetQ, Time.deltaTime * gunSpeed);
 		}
 	}
+
 }

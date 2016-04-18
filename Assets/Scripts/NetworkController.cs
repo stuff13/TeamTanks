@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 
 using UnityEngine;
 
@@ -6,6 +7,8 @@ public class NetworkController : MonoBehaviour
 {
 
     public static NetworkController Instance { get; private set; }
+
+    private PacketListener listener;
 	// Use this for initialization
 	void Start ()
     {
@@ -18,7 +21,7 @@ public class NetworkController : MonoBehaviour
 
 	    if (SystemInfo.operatingSystem.Contains("Windows"))
 	    {
-            new PacketListener();
+            listener = new PacketListener();
         }
         else
         {
@@ -40,6 +43,11 @@ public class NetworkController : MonoBehaviour
     // some way to connect from client
 
     // some way to receive messages from clients: figure out new location of objects 
+
+    void OnApplicationQuit()
+    {
+        listener.RequestStopListening();
+    }
 }
 
 [Serializable]
