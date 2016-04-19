@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Remoting.Channels;
 using System.Text;
@@ -92,7 +94,6 @@ public class NetworkController : MonoBehaviour, IUpdateClientObjects
 // 11 * 4 = 44 bytes
 // max size UDP message can send and ensure it isn't broken up is 508 bytes
 //      => we can 11 Packet objects at once
-[StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct Packet
 {
     public int ObjectId;    // id mapped to name of object
@@ -100,30 +101,48 @@ public struct Packet
     public Vector3 Velocity;    // current Velocity <== can I use this if I don't have full synchronisation on client and server
     public Quaternion Rotation;    // current orientation
 
-    public static byte[] ToBytes(Packet packet)
+    public static void WriteToStream(Packet toWrite, Stream where)
     {
-        int size = Marshal.SizeOf(packet);
-        byte[] arr = new byte[size];
-
-        IntPtr ptr = Marshal.AllocHGlobal(size);
-        Marshal.StructureToPtr(packet, ptr, true);
-        Marshal.Copy(ptr, arr, 0, size);
-        Marshal.FreeHGlobal(ptr);
-        return arr;
+        BinaryWriter writer = new BinaryWriter(where);
+        writer.Write((Int32)toWrite.ObjectId);
+        writer.Write(toWrite.Location.x);
+        writer.Write(toWrite.Location.y);
+        writer.Write(toWrite.Location.z);
+        writer.Write(toWrite.Rotation.x);
+        writer.Write(toWrite.Rotation.y);
+        writer.Write(toWrite.Rotation.z);
+        writer.Write(toWrite.Rotation.w);
     }
 
-    public static Packet FromBytes(byte[] arr)
+    public static Packet ReadFromStream(Stream from)
     {
-        var packet = new Packet();
-        int size = Marshal.SizeOf(packet);
-        IntPtr ptr = Marshal.AllocHGlobal(size);
-        Marshal.Copy(arr, 0, ptr, size);
-
-        packet = (Packet)Marshal.PtrToStructure(ptr, packet.GetType());
-        Marshal.FreeHGlobal(ptr);
-
-        return packet;
+        BinaryReader reader = new BinaryReader(from);
+        int objectId = reader.ReadInt32();
+        float x = reader.ReadSingle();
+        float y = reader.ReadSingle();
+        float z = reader.ReadSingle();
+        Vector3 position = new Vector3(x, y, z);
+        x = reader.ReadSingle();
+        y = reader.ReadSingle();
+        z = reader.ReadSingle();
+        float w = reader.ReadSingle();
+        Quaternion rotation = new Quaternion(x, y, z, w);
+        return new Packet { ObjectId = objectId, Location = position, Rotation = rotation };
     }
+
+    public static byte[] ToBytes(Packet toSerialize)
+    {
+        MemoryStream stream = new MemoryStream();
+        Packet.WriteToStream(toSerialize, stream);
+        return stream.ToArray();
+    }
+
+    public static Packet FromBytes(byte[] fromSerialize)
+    {
+        MemoryStream stream = new MemoryStream(fromSerialize);
+        return Packet.ReadFromStream(stream);
+    }
+
 }
 
 public interface IUpdateClientObjects
