@@ -2,60 +2,26 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
-using System.ComponentModel;
 
-
-public class PacketClient
+public class PacketClient : PacketHandler
 {
-    private volatile bool _keepListeningForClients = true;
-    public volatile bool IsMessageToSend = false;
-	private const string ServerAddress = "192.168.0.6";
-	private const int Port = 11000;
-    private BackgroundWorker senderThread = null;
-    private BackgroundWorker _listenerThread;
-    private Socket _listeningSocket = null;
-
-    private IUpdateClientObjects _updater;
-
-    public PacketClient(IUpdateClientObjects updater)
+    public PacketClient(IUpdateObjects updater) : base (updater)
     {
-        _updater = updater;	
-        _listenerThread = new BackgroundWorker();
-        _listenerThread.DoWork += Listen;
-        _listenerThread.WorkerReportsProgress = true;
-        _listenerThread.ProgressChanged += ProgressMessage;
-        // send it off
-        _listenerThread.RunWorkerAsync();
-        Debug.Log("Started background thread to listen for messages");
-
+        SynchForEndPoint = "synchForServerEndPoint";
+        SynchForData = "synchForServerData";
     }
 
-    public void SendPacket(Packet packet)
+    protected override void Send(object packet)
     {
-        // create thread
-        senderThread = new BackgroundWorker();
-        senderThread.DoWork += Sender;
-        // send it off
-        IsMessageToSend = true;
-        senderThread.RunWorkerAsync(packet);
-    }
-
-    private void Sender(object sender, DoWorkEventArgs eventArgs)
-	{
         Socket sendingSocket = null;
         try
         {
-            // Establish the remote endpoint for the socket.
             IPAddress ipAddress = IPAddress.Parse(ServerAddress); 
             IPEndPoint remoteEP = new IPEndPoint(ipAddress, Port);
-            // Create a TCP/IP socket.
+
+            byte[] bytes = Packet.ToBytes((Packet)packet);
             sendingSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-
-            Packet packet = (Packet)eventArgs.Argument;
-            byte[] bytes = Packet.ToBytes(packet);
-
             sendingSocket.SendTo(bytes, bytes.Length, SocketFlags.None, remoteEP);
-            Debug.Log("message sent from client");
         }
         catch (Exception e)
         {
@@ -63,40 +29,39 @@ public class PacketClient
         }
         finally
         {
-            if(sendingSocket != null)
+            if (sendingSocket != null)
+            {
                 sendingSocket.Close();
+            }
         }
-
 	}
 
-    private void Listen(object sender, DoWorkEventArgs eventArgs)
+    protected override void Listen()
     {
-        BackgroundWorker worker = sender as BackgroundWorker;
-
         // Data buffer for incoming data.
         var bytes = new byte[1024];
 
-        // Establish the local endpoint for the _socket.
-        // IPAddress ipAddress = IPAddress.Parse(ServerAddress);
-        // IPEndPoint localEndPoint = new IPEndPoint(ipAddress, Port);
-        EndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
-        _listeningSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+        // TODO: check to see if we can fix the ip address here for security
+        EndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);   
+        Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 
         try
         {
-            _listeningSocket.Blocking = false;
-            while (_keepListeningForClients)
+            socket.Blocking = false;
+            while (KeepListening)
             {
-                if (_listeningSocket.Available > 0)
+                if (socket.Available > 0)
                 {
-                	// TODO: check return value for number of bytes
-                    _listeningSocket.ReceiveFrom(bytes, ref endPoint);
-                    Debug.Log("Received message from client. Decoding...");
-                    var message = Packet.FromBytes(bytes);
-                    if (worker != null) worker.ReportProgress(0, message);
+                	int retreivedData = socket.ReceiveFrom(bytes, ref endPoint);
+                    if (retreivedData > 0)
+                    {
+                        lock (SynchForData)
+                        {
+                            Data.Add(Packet.FromBytes(bytes));
+                        }
+                    }
                 }
             }
-
         }
         catch (Exception e)
         {
@@ -104,18 +69,7 @@ public class PacketClient
         }
         finally
         {
-            _listeningSocket.Close();
+            socket.Close();
         }
-    }
-
-    private void ProgressMessage(object sender, ProgressChangedEventArgs eventArgs)
-    {
-        var packet = (Packet)eventArgs.UserState;
-        _updater.UpdateClientFromServer(packet);
-    }
-
-    public void RequestStopListening()
-    {
-        _keepListeningForClients = false;
     }
 }

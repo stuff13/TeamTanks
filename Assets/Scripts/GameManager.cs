@@ -12,13 +12,16 @@ public class GameManager : MonoBehaviour
     //	[SerializeField] private float turretSpeed = 2.0f;
 
 	private bool onApple = false;
+    static int mainThreadId;
 
     public static bool IsServer { get { return !Instance.onApple; } }
     public CardboardHead Head { get; set; }
 
     void Start () 
 	{
-		if(Instance == null)
+        mainThreadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
+
+        if (Instance == null)
 		{
 			Instance = this;
 		}
@@ -50,4 +53,10 @@ public class GameManager : MonoBehaviour
 	{
 	}
 
+
+    // If called in the non main thread, will return false;
+    public static bool IsMainThread
+    {
+        get { return System.Threading.Thread.CurrentThread.ManagedThreadId == mainThreadId; }
+    }
 }

@@ -1,13 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Runtime.Remoting.Channels;
 using System.Text;
 
 using UnityEngine;
+using UnityEngine.Assertions;
 
-public class NetworkController : MonoBehaviour, IUpdateClientObjects, IUpdateServerObjects
+public class NetworkController : MonoBehaviour, IUpdateObjects
 {
 
     public static NetworkController Instance { get; private set; }
@@ -15,8 +14,9 @@ public class NetworkController : MonoBehaviour, IUpdateClientObjects, IUpdateSer
     private PacketServer listener;
     private PacketClient sender;
 
-    private GameObject tank;
-    private GameObject gun;
+    private PacketHandler dataHandler;
+    private GameObject objectToUpdate;
+    [SerializeField] private GameObject gun;
 
     // Use this for initialization
     void Start ()
@@ -27,24 +27,27 @@ public class NetworkController : MonoBehaviour, IUpdateClientObjects, IUpdateSer
 	        Destroy(Instance.gameObject);
 	    }
 	    Instance = this;
-
-	    if (SystemInfo.operatingSystem.Contains("Windows"))
+        
+        if (SystemInfo.operatingSystem.Contains("Windows"))
 	    {
-            listener = new PacketServer(this);
-        }
+            dataHandler = new PacketServer(this);
+            dataHandler.StartListening();
+	        objectToUpdate = gun;
+
+	    }
         else // we're on an apple device
 	    {
-            tank = GameObject.Find("Tank");
+            objectToUpdate = GameObject.Find("Tank");
 
-			sender = new PacketClient(this);
-			gun = GameObject.Find("Gun");
+            dataHandler = new PacketClient(this);
 			UpdateObjectLocations(gun);	// initialise and give server client info
         }
     }
 	
 	// Update is called once per frame
-	void Update () {
-	
+	void Update ()
+	{
+	    while (dataHandler.CheckAndHandleNewData()) ;  // cycle till we have gathered all the new data
 	}
 
     void FixedUpdate()
@@ -61,14 +64,7 @@ public class NetworkController : MonoBehaviour, IUpdateClientObjects, IUpdateSer
                              Rotation = currentGameObject.transform.rotation,
                          };
 
-        if(GameManager.IsServer)
-        {
-			listener.SendPacket(packet);
-        }
-        else
-        {
-        	sender.SendPacket(packet);
-        }
+        dataHandler.SendPacket(packet);
     }
 
     // some way to connect from client
@@ -77,26 +73,21 @@ public class NetworkController : MonoBehaviour, IUpdateClientObjects, IUpdateSer
 
     void OnApplicationQuit()
     {
-        if (listener != null)
+        if (dataHandler != null)
         {
-            listener.RequestStopListening();
+            dataHandler.RequestStopListening();
         }
 
         
     }
 
-    // these are the updates from the server
-    public void UpdateClientFromServer(Packet updatedTank)
-    {
-		tank.transform.position = updatedTank.Location;
-		tank.transform.rotation = updatedTank.Rotation;
-    }
-
     // updates from the client
-    public void UpdateServerFromClient(Packet updatedObject)
+    public void UpdatePacket(Packet updatedObject)
     {
-		gun.transform.position = updatedObject.Location;
-		gun.transform.rotation = updatedObject.Rotation;
+        Debug.Assert(GameManager.IsMainThread);
+
+        objectToUpdate.transform.position = updatedObject.Location;
+        objectToUpdate.transform.rotation = updatedObject.Rotation;
     }
 }
 
@@ -104,63 +95,8 @@ public class NetworkController : MonoBehaviour, IUpdateClientObjects, IUpdateSer
 // 11 * 4 = 44 bytes
 // max size UDP message can send and ensure it isn't broken up is 508 bytes
 //      => we can 11 Packet objects at once
-public struct Packet
+
+public interface IUpdateObjects
 {
-    public int ObjectId;    // id mapped to name of object
-    public Vector3 Location;    // current Location
-    // public Vector3 Velocity;    // current Velocity <== can I use this if I don't have full synchronisation on client and server
-    public Quaternion Rotation;    // current orientation
-
-    public static void WriteToStream(Packet toWrite, Stream where)
-    {
-        BinaryWriter writer = new BinaryWriter(where);
-        writer.Write((Int32)toWrite.ObjectId);
-        writer.Write(toWrite.Location.x);
-        writer.Write(toWrite.Location.y);
-        writer.Write(toWrite.Location.z);
-        writer.Write(toWrite.Rotation.x);
-        writer.Write(toWrite.Rotation.y);
-        writer.Write(toWrite.Rotation.z);
-        writer.Write(toWrite.Rotation.w);
-    }
-
-    public static Packet ReadFromStream(Stream from)
-    {
-        BinaryReader reader = new BinaryReader(from);
-        int objectId = reader.ReadInt32();
-        float x = reader.ReadSingle();
-        float y = reader.ReadSingle();
-        float z = reader.ReadSingle();
-        Vector3 position = new Vector3(x, y, z);
-        x = reader.ReadSingle();
-        y = reader.ReadSingle();
-        z = reader.ReadSingle();
-        float w = reader.ReadSingle();
-        Quaternion rotation = new Quaternion(x, y, z, w);
-        return new Packet { ObjectId = objectId, Location = position, Rotation = rotation };
-    }
-
-    public static byte[] ToBytes(Packet toSerialize)
-    {
-        MemoryStream stream = new MemoryStream();
-        Packet.WriteToStream(toSerialize, stream);
-        return stream.ToArray();
-    }
-
-    public static Packet FromBytes(byte[] fromSerialize)
-    {
-        MemoryStream stream = new MemoryStream(fromSerialize);
-        return Packet.ReadFromStream(stream);
-    }
-
-}
-
-public interface IUpdateClientObjects
-{
-    void UpdateClientFromServer(Packet thing);
-}
-
-public interface IUpdateServerObjects
-{
-	void UpdateServerFromClient(Packet thing);
+	void UpdatePacket(Packet thing);
 }

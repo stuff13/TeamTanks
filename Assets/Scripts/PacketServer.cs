@@ -2,56 +2,36 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
-using System.ComponentModel;
 
-public class PacketServer : IDisposable
+public class PacketServer : PacketHandler
 {
-    private volatile bool _keepListeningForClients = true;
-	private const string ServerAddress = "192.168.0.6";
-	private const int Port = 11000;
-    private BackgroundWorker _listenerThread;
-
-    private BackgroundWorker _sendThread;
     private EndPoint _clientEndPoint;
-    private readonly string synchForEndPoint = "synchForEndPoint";
-    private Socket _socket;
-	private IUpdateServerObjects _updater;
 
-	public PacketServer(IUpdateServerObjects updater)
+    public PacketServer(IUpdateObjects updater)
+        : base(updater)
     {
-    	_updater = updater;
-        // create thread
-        _listenerThread = new BackgroundWorker();
-        _listenerThread.DoWork += Listen;
-        _listenerThread.WorkerReportsProgress = true;
-        _listenerThread.ProgressChanged += ProgressMessage;
-        // send it off
-        _listenerThread.RunWorkerAsync();
-        Debug.Log("Started background thread to listen for messages");
+        Debug.Assert(GameManager.IsMainThread, "Packet Server constructor is not on the main thread!");
+
+        SynchForEndPoint = "synchForServerEndPoint";
+        SynchForData = "synchForServerData";
     }
 
-    // TODO: we may need to only create one packet and one socket for 
-    // sending data
-    public void SendPacket(Packet packet)
+    protected override void Send(object packet)
     {
-        _sendThread = new BackgroundWorker();
-        _sendThread.DoWork += Send;
-        _sendThread.WorkerReportsProgress = false;
-        _sendThread.RunWorkerAsync(new Response {ClientEndPoint = _clientEndPoint, CurrentObject = packet});
-        Debug.Log("Sent packet to client");
-    }
+        if (_clientEndPoint == null) return;      // here, we ensure that the _clientEndPoint has already been set
 
-    private void Send(object sender, DoWorkEventArgs eventArgs)
-    {
         Socket heldSocket = null;
         try
         {
-            heldSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            EndPoint endpoint;
+            byte[] byteData = Packet.ToBytes((Packet)packet);
+            lock (SynchForEndPoint)
+            {
+                endpoint = _clientEndPoint;
+            }
 
-            var response = (Response)eventArgs.Argument;
-            byte[] byteData = Packet.ToBytes(response.CurrentObject);
-            heldSocket.SendTo(byteData, byteData.Length, SocketFlags.None, response.ClientEndPoint);
-            Debug.Log("packet sent");
+            heldSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            heldSocket.SendTo(byteData, byteData.Length, SocketFlags.None, endpoint);
         }
         catch (Exception e)
         {
@@ -66,38 +46,35 @@ public class PacketServer : IDisposable
         }
     }
 
-    private void Listen(object sender, DoWorkEventArgs eventArgs)
+    protected override void Listen()
     {
-        BackgroundWorker worker = sender as BackgroundWorker;
-
-        // Data buffer for incoming data.
+        // Data buffer for incoming Data.
         var bytes = new byte[1024];
 
         // Establish the local endpoint for the _socket.
-		IPAddress ipAddress = IPAddress.Parse(ServerAddress);
-		IPEndPoint localEndPoint = new IPEndPoint(ipAddress, Port);
-        _clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
-        _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+        IPAddress ipAddress = IPAddress.Parse(ServerAddress);
+        IPEndPoint localEndPoint = new IPEndPoint(ipAddress, Port);
+        EndPoint clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
+        Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 
         try
         {
-            _socket.Bind(localEndPoint);
-            _socket.Blocking = false;
-            while (_keepListeningForClients)
+            socket.Bind(localEndPoint);
+            socket.Blocking = false;
+            while (KeepListening)
             {
-                if (_socket.Poll(1000, SelectMode.SelectRead))
+                if (socket.Available > 0)
                 {
-                    lock (synchForEndPoint)
+                    socket.ReceiveFrom(bytes, ref clientEndPoint);
+                    lock (SynchForEndPoint) 
                     {
-                        _socket.ReceiveFrom(bytes, ref _clientEndPoint);
+                        _clientEndPoint = clientEndPoint;
                     }
-                    Debug.Log("Received message from client. Decoding...");
-                    var message = new Response
-                                      {
-                                          ClientEndPoint = _clientEndPoint,
-                                          CurrentObject = Packet.FromBytes(bytes)
-                                      };
-                    if (worker != null) worker.ReportProgress(0, message);
+
+                    lock (SynchForData)
+                    {
+                        Data.Add(Packet.FromBytes(bytes));
+                    }
                 }
             }
 
@@ -108,34 +85,8 @@ public class PacketServer : IDisposable
         }
         finally
         {
-            _socket.Close();
+            socket.Close();
         }
     }
 
-    private void ProgressMessage(object sender, ProgressChangedEventArgs eventArgs)
-    {
-        var response = (Response)eventArgs.UserState;
-        _clientEndPoint = response.ClientEndPoint;
-
-        _updater.UpdateServerFromClient(response.CurrentObject);
-    }
-
-
-
-    public void RequestStopListening()
-    {
-        _keepListeningForClients = false;
-    }
-
-    public void Dispose()
-    {
-        RequestStopListening();
-    }
-
-    private struct Response
-    {
-        public Packet CurrentObject;
-        public EndPoint ClientEndPoint;
-    }
 }
-

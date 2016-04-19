@@ -61,7 +61,7 @@ public class PCPlayerController : MonoBehaviour
             }
             else
             {
-               NetworkController.Instance.UpdateObjectLocations(gun);
+                NetworkController.Instance.UpdateObjectLocations(gun);
             }
         }
     }
