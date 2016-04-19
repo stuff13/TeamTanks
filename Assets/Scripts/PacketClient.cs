@@ -17,7 +17,7 @@ public class PacketClient
 
     private IUpdateClientObjects _updater;
 
-    public PacketClient(Packet packet, IUpdateClientObjects updater)
+    public PacketClient(IUpdateClientObjects updater)
     {
         _updater = updater;
 
@@ -26,8 +26,7 @@ public class PacketClient
         senderThread.DoWork += Sender;
         // send it off
         IsMessageToSend = true;
-        Debug.Log("Started background thread to listen for messages");
-
+	
         _listenerThread = new BackgroundWorker();
         _listenerThread.DoWork += Listen;
         _listenerThread.WorkerReportsProgress = true;
@@ -114,7 +113,7 @@ public class PacketClient
     private void ProgressMessage(object sender, ProgressChangedEventArgs eventArgs)
     {
         var packet = (Packet)eventArgs.UserState;
-        _updater.UpdateClient(packet);
+        _updater.UpdateClientFromServer(packet);
     }
 
     public void RequestStopListening()
