@@ -7,7 +7,7 @@ using System.Text;
 
 using UnityEngine;
 
-public class NetworkController : MonoBehaviour, IUpdateClientObjects
+public class NetworkController : MonoBehaviour, IUpdateClientObjects, IUpdateServerObjects
 {
 
     public static NetworkController Instance { get; private set; }
@@ -16,6 +16,7 @@ public class NetworkController : MonoBehaviour, IUpdateClientObjects
     private PacketClient sender;
 
     private GameObject tank;
+    private GameObject gun;
 
     // Use this for initialization
     void Start ()
@@ -29,14 +30,14 @@ public class NetworkController : MonoBehaviour, IUpdateClientObjects
 
 	    if (SystemInfo.operatingSystem.Contains("Windows"))
 	    {
-            listener = new PacketServer();
+            listener = new PacketServer(this);
         }
         else // we're on an apple device
 	    {
             tank = GameObject.Find("Tank");
 
 			sender = new PacketClient(this);
-			GameObject gun = GameObject.Find("Gun");
+			gun = GameObject.Find("Gun");
 			UpdateObjectLocations(gun);	// initialise and give server client info
         }
     }
@@ -85,10 +86,17 @@ public class NetworkController : MonoBehaviour, IUpdateClientObjects
     }
 
     // these are the updates from the server
-    public void UpdateClientFromServer(Packet updatedGun)
+    public void UpdateClientFromServer(Packet updatedTank)
     {
-        tank.transform.position = updatedGun.Location;
-        tank.transform.rotation = updatedGun.Rotation;
+		tank.transform.position = updatedTank.Location;
+		tank.transform.rotation = updatedTank.Rotation;
+    }
+
+    // updates from the client
+    public void UpdateServerFromClient(Packet updatedObject)
+    {
+		gun.transform.position = updatedObject.Location;
+		gun.transform.rotation = updatedObject.Rotation;
     }
 }
 
@@ -152,3 +160,7 @@ public interface IUpdateClientObjects
     void UpdateClientFromServer(Packet thing);
 }
 
+public interface IUpdateServerObjects
+{
+	void UpdateServerFromClient(Packet thing);
+}

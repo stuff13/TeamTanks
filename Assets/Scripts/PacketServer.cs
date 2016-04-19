@@ -13,10 +13,11 @@ public class PacketServer : IDisposable
     private EndPoint _clientEndPoint;
     private readonly string synchForEndPoint = "synchForEndPoint";
     private Socket _socket;
+	private IUpdateServerObjects _updater;
 
-
-    public PacketServer()
+	public PacketServer(IUpdateServerObjects updater)
     {
+    	_updater = updater;
         // create thread
         _listenerThread = new BackgroundWorker();
         _listenerThread.DoWork += Listen;
@@ -113,6 +114,8 @@ public class PacketServer : IDisposable
     {
         var response = (Response)eventArgs.UserState;
         _clientEndPoint = response.ClientEndPoint;
+
+        _updater.UpdateServerFromClient(response.CurrentObject);
     }
 
 

@@ -7,8 +7,15 @@ public class PCPlayerController : MonoBehaviour
     [SerializeField] private float rotationSpeed = 20.0f;
     [SerializeField] private GameObject gun = null;
     [SerializeField] private float gunSpeed = 5.0f;
+	[SerializeField] private float networkFrameTime = 0.1f;
 
-    private float _baseTime = 0.0f;
+    private float _frameCount = 0;
+    private int _numberOfFixedFrames = 0;
+
+    void Start()
+    {
+    	_numberOfFixedFrames = (int)(networkFrameTime / Time.fixedDeltaTime);
+    }
 
 	void Update ()
 	{
@@ -41,16 +48,20 @@ public class PCPlayerController : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (Time.deltaTime - _baseTime > 0.1)
+    	
+    	// Time.deltaTime is constant in Fixed Update
+    	++_frameCount;
+    	  
+        if (_frameCount > _numberOfFixedFrames)
         {
-            _baseTime += 0.1f;
+            _frameCount = 0;
             if (GameManager.IsServer)
             {
                 NetworkController.Instance.UpdateObjectLocations(gameObject);
             }
             else
             {
-               // NetworkController.Instance.UpdateObjectLocations(gun);
+               NetworkController.Instance.UpdateObjectLocations(gun);
             }
         }
     }
