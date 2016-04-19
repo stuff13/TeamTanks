@@ -12,21 +12,14 @@ public class PacketClient
 	private const string ServerAddress = "192.168.0.6";
 	private const int Port = 11000;
     private BackgroundWorker senderThread = null;
-    private Socket _listeningSocket = null;
     private BackgroundWorker _listenerThread;
+    private Socket _listeningSocket = null;
 
     private IUpdateClientObjects _updater;
 
     public PacketClient(IUpdateClientObjects updater)
     {
-        _updater = updater;
-
-        // create thread
-        senderThread = new BackgroundWorker();
-        senderThread.DoWork += Sender;
-        // send it off
-        IsMessageToSend = true;
-	
+        _updater = updater;	
         _listenerThread = new BackgroundWorker();
         _listenerThread.DoWork += Listen;
         _listenerThread.WorkerReportsProgress = true;
@@ -39,6 +32,11 @@ public class PacketClient
 
     public void SendPacket(Packet packet)
     {
+        // create thread
+        senderThread = new BackgroundWorker();
+        senderThread.DoWork += Sender;
+        // send it off
+        IsMessageToSend = true;
         senderThread.RunWorkerAsync(packet);
     }
 

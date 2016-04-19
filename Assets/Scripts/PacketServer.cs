@@ -10,6 +10,8 @@ public class PacketServer : IDisposable
 	private const string ServerAddress = "192.168.0.6";
 	private const int Port = 11000;
     private BackgroundWorker _listenerThread;
+
+    private BackgroundWorker _sendThread;
     private EndPoint _clientEndPoint;
     private readonly string synchForEndPoint = "synchForEndPoint";
     private Socket _socket;
@@ -32,10 +34,10 @@ public class PacketServer : IDisposable
     // sending data
     public void SendPacket(Packet packet)
     {
-        _listenerThread = new BackgroundWorker();
-        _listenerThread.DoWork += Send;
-        _listenerThread.WorkerReportsProgress = false;
-        _listenerThread.RunWorkerAsync(new Response {ClientEndPoint = _clientEndPoint, CurrentObject = packet});
+        _sendThread = new BackgroundWorker();
+        _sendThread.DoWork += Send;
+        _sendThread.WorkerReportsProgress = false;
+        _sendThread.RunWorkerAsync(new Response {ClientEndPoint = _clientEndPoint, CurrentObject = packet});
         Debug.Log("Sent packet to client");
     }
 
