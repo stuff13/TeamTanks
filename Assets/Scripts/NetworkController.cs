@@ -14,15 +14,16 @@ public class NetworkController : MonoBehaviour, IUpdateClientObjects
     private PacketClient sender;
 
     private GameObject gun;
+    private GameObject tank;
 
     // Use this for initialization
     void Start ()
     {
+        // set up as a singleton
 	    if (Instance != null)
 	    {
 	        Destroy(Instance.gameObject);
 	    }
-
 	    Instance = this;
 
 	    if (SystemInfo.operatingSystem.Contains("Windows"))
@@ -31,6 +32,7 @@ public class NetworkController : MonoBehaviour, IUpdateClientObjects
         }
         else // we're on an apple device
 	    {
+            tank = GameObject.Find("Tank");
 	        gun = GameObject.Find("Gun");
 	        var packet = new Packet
 	                         {
@@ -60,7 +62,14 @@ public class NetworkController : MonoBehaviour, IUpdateClientObjects
                              Rotation = currentGameObject.transform.rotation,
                          };
 
-        listener.SendPacket(packet);
+        if(GameManager.IsServer)
+        {
+			listener.SendPacket(packet);
+        }
+        else
+        {
+        	sender.SendPacket(packet);
+        }
     }
 
     // some way to connect from client
@@ -77,10 +86,11 @@ public class NetworkController : MonoBehaviour, IUpdateClientObjects
         
     }
 
+    // these are the updates from the server
     public void UpdateClient(Packet updatedGun)
     {
-        gun.transform.position = updatedGun.Location;
-        gun.transform.rotation = updatedGun.Rotation;
+        tank.transform.position = updatedGun.Location;
+        tank.transform.rotation = updatedGun.Rotation;
     }
 }
 
@@ -101,10 +111,18 @@ public struct Packet
         int size = Marshal.SizeOf(packet);
         byte[] arr = new byte[size];
 
-        IntPtr ptr = Marshal.AllocHGlobal(size);
-        Marshal.StructureToPtr(packet, ptr, true);
-        Marshal.Copy(ptr, arr, 0, size);
-        Marshal.FreeHGlobal(ptr);
+        try
+        {   
+	        IntPtr ptr = Marshal.AllocHGlobal(size);
+    	    Marshal.StructureToPtr(packet, ptr, true);
+        	Marshal.Copy(ptr, arr, 0, size);
+       		Marshal.FreeHGlobal(ptr);
+		}
+		catch(Exception Ex)
+		{
+			Debug.Log(Ex.Message);
+		}
+
         return arr;
     }
 
@@ -124,6 +142,6 @@ public struct Packet
 
 public interface IUpdateClientObjects
 {
-    void UpdateClient(Packet gun);
+    void UpdateClient(Packet thing);
 }
 

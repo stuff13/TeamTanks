@@ -35,6 +35,8 @@ public class PCPlayerController : MonoBehaviour
 	    {
             var targetQ = Quaternion.LookRotation(GameManager.Instance.Head.Gaze.direction);
             gun.transform.rotation = Quaternion.Slerp(gun.transform.rotation, targetQ, Time.deltaTime * gunSpeed);
+
+            NetworkController.Instance.UpdateObjectLocations(gun);
         }
     }
 
@@ -49,7 +51,7 @@ public class PCPlayerController : MonoBehaviour
             }
             else
             {
-                NetworkController.Instance.UpdateObjectLocations(gun);
+               // NetworkController.Instance.UpdateObjectLocations(gun);
             }
         }
     }

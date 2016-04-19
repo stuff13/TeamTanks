@@ -80,19 +80,19 @@ public class PacketClient
         var bytes = new byte[1024];
 
         // Establish the local endpoint for the _socket.
-        IPAddress ipAddress = IPAddress.Parse(ServerAddress);
-        IPEndPoint localEndPoint = new IPEndPoint(ipAddress, Port);
+        // IPAddress ipAddress = IPAddress.Parse(ServerAddress);
+        // IPEndPoint localEndPoint = new IPEndPoint(ipAddress, Port);
         EndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
         _listeningSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 
         try
         {
-            _listeningSocket.Bind(localEndPoint);
             _listeningSocket.Blocking = false;
             while (_keepListeningForClients)
             {
                 if (_listeningSocket.Available > 0)
                 {
+                	// TODO: check return value for number of bytes
                     _listeningSocket.ReceiveFrom(bytes, ref endPoint);
                     Debug.Log("Received message from client. Decoding...");
                     var message = Packet.FromBytes(bytes);
