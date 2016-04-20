@@ -30,18 +30,19 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
         
         if (SystemInfo.operatingSystem.Contains("Windows"))
 	    {
+			objectToUpdate = gun;
             dataHandler = new PacketServer(this);
-            dataHandler.StartListening();
-	        objectToUpdate = gun;
 
 	    }
         else // we're on an apple device
 	    {
             objectToUpdate = GameObject.Find("Tank");
-
             dataHandler = new PacketClient(this);
-			UpdateObjectLocations(gun);	// initialise and give server client info
+
+  			UpdateObjectLocations(gun);	// initialise and give server client info
         }
+
+		dataHandler.StartListening();
     }
 	
 	// Update is called once per frame
@@ -60,8 +61,8 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
     {
         var packet = new Packet
                          {
-                             Location = currentGameObject.transform.position,
-                             Rotation = currentGameObject.transform.rotation,
+                             Location = currentGameObject.transform.localPosition,
+                             Rotation = currentGameObject.transform.localRotation,
                          };
 
         dataHandler.SendPacket(packet);
@@ -86,8 +87,8 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
     {
         Debug.Assert(GameManager.IsMainThread);
 
-        objectToUpdate.transform.position = updatedObject.Location;
-        objectToUpdate.transform.rotation = updatedObject.Rotation;
+        objectToUpdate.transform.localPosition = updatedObject.Location;
+        objectToUpdate.transform.localRotation = updatedObject.Rotation;
     }
 }
 

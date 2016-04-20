@@ -41,6 +41,11 @@ public abstract class PacketHandler : IPacketHandler, IDisposable
     public void SendPacket(Packet packet)
     {
         ThreadPool.QueueUserWorkItem(Send, packet);
+//		Debug.Log(String.Format("Sending packet Rotation: x={0}, y={1}, z={2}",
+//			packet.Rotation.x, packet.Rotation.y, packet.Rotation.z));
+//		Debug.Log(String.Format("Sending packet Location: x={0}, y={1}, z={2}",
+//			packet.Location.x, packet.Location.y, packet.Location.z));
+
     }
 
 
@@ -55,8 +60,10 @@ public abstract class PacketHandler : IPacketHandler, IDisposable
                 Data.RemoveAt(0);
             }
 
-            Debug.Log(String.Format("Received packet: x={0}, y={1}, z={2}",
-                newPacket.Rotation.x, newPacket.Rotation.y, newPacket.Rotation.z));
+			Debug.Log(String.Format("Received packet Rotation: x={0}, y={1}, z={2}",
+				newPacket.Rotation.x, newPacket.Rotation.y, newPacket.Rotation.z));
+			Debug.Log(String.Format("Received packet Location: x={0}, y={1}, z={2}",
+				newPacket.Location.x, newPacket.Location.y, newPacket.Location.z));
             Updater.UpdatePacket(newPacket);
 
             return true;
