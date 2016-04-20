@@ -7,6 +7,8 @@ public class PacketServer : PacketHandler
 {
     private EndPoint _clientEndPoint;
 
+    private Socket _sendingSocket;
+
     public PacketServer(IUpdateObjects updater)
         : base(updater)
     {
@@ -14,6 +16,8 @@ public class PacketServer : PacketHandler
 
         SynchForEndPoint = "synchForServerEndPoint";
         SynchForData = "synchForServerData";
+
+         
     }
 
     protected override void Send(object packet)
@@ -23,15 +27,13 @@ public class PacketServer : PacketHandler
         Socket heldSocket = null;
         try
         {
-            EndPoint endpoint;
             byte[] byteData = Packet.ToBytes((Packet)packet);
-            lock (SynchForEndPoint)
-            {
-                endpoint = _clientEndPoint;
-            }
 
             heldSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            heldSocket.SendTo(byteData, byteData.Length, SocketFlags.None, endpoint);
+            lock (SynchForEndPoint)
+            {
+                heldSocket.SendTo(byteData, byteData.Length, SocketFlags.None, _clientEndPoint);
+            }
         }
         catch (Exception e)
         {
@@ -66,18 +68,18 @@ public class PacketServer : PacketHandler
                 if (socket.Available > 0)
                 {
                     socket.ReceiveFrom(bytes, ref clientEndPoint);
-                    lock (SynchForEndPoint) 
+
+                    // if(_clientEndPoint == null)
+                    lock (SynchForEndPoint)
                     {
                         _clientEndPoint = clientEndPoint;
                     }
-
                     lock (SynchForData)
                     {
                         Data.Add(Packet.FromBytes(bytes));
                     }
                 }
             }
-
         }
         catch (Exception e)
         {

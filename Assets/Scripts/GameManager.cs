@@ -36,16 +36,20 @@ public class GameManager : MonoBehaviour
 	    if (onApple)
 	    {
 	        Cardboard.Create();
-	        turretCamera.SetActive(true);
 	        mainCamera.SetActive(false);
             Head = turretCamera.GetComponent<StereoController>().Head;
-	        GetComponent<Cardboard>().VRModeEnabled = true;
+	        turretCamera.GetComponent<Camera>().enabled = true;
+            turretCamera.GetComponent<CardboardHead>().enabled = true;
+            turretCamera.GetComponent<AudioListener>().enabled = true;
+            GetComponent<Cardboard>().VRModeEnabled = true;
 	    }
 	    else
 	    {
 	        mainCamera.SetActive(true);
-	        turretCamera.SetActive(false);
-	        GetComponent<Cardboard>().VRModeEnabled = false;
+	        turretCamera.GetComponent<Camera>().enabled = false;
+	        turretCamera.GetComponent<CardboardHead>().enabled = false;
+            turretCamera.GetComponent<AudioListener>().enabled = false;
+            GetComponent<Cardboard>().VRModeEnabled = false;
 	    }
 	}
 

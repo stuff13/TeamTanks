@@ -56,38 +56,31 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
         // update each one with new Location of gameObject
     }
 
-    public void UpdateObjectLocations(GameObject currentGameObject)
-    {
-        var packet = new Packet
-                         {
-                             Location = currentGameObject.transform.position,
-                             Rotation = currentGameObject.transform.rotation,
-                         };
-
-        dataHandler.SendPacket(packet);
-    }
-
-    // some way to connect from client
-
-    // some way to receive messages from clients: figure out new location of objects 
-
     void OnApplicationQuit()
     {
         if (dataHandler != null)
         {
             dataHandler.RequestStopListening();
         }
+    }
 
-        
+    public void UpdateObjectLocations(GameObject currentGameObject)
+    {
+        var packet = new Packet
+                         {
+                             Location = currentGameObject.transform.localPosition,
+                             Rotation = currentGameObject.transform.localRotation,
+                         };
+
+        dataHandler.SendPacket(packet);
     }
 
     // updates from the client
     public void UpdatePacket(Packet updatedObject)
     {
         Debug.Assert(GameManager.IsMainThread);
-
-        objectToUpdate.transform.position = updatedObject.Location;
-        objectToUpdate.transform.rotation = updatedObject.Rotation;
+        objectToUpdate.transform.localPosition = updatedObject.Location;
+        objectToUpdate.transform.localRotation = updatedObject.Rotation;
     }
 }
 

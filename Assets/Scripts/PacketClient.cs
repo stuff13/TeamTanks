@@ -19,6 +19,7 @@ public class PacketClient : PacketHandler
             IPAddress ipAddress = IPAddress.Parse(ServerAddress); 
             IPEndPoint remoteEP = new IPEndPoint(ipAddress, Port);
 
+
             byte[] bytes = Packet.ToBytes((Packet)packet);
             sendingSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             sendingSocket.SendTo(bytes, bytes.Length, SocketFlags.None, remoteEP);
