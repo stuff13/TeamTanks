@@ -5,35 +5,38 @@ using System.Net.Sockets;
 
 public class PacketClient : PacketHandler
 {
+    private Socket _clientSocket;
+
     public PacketClient(IUpdateObjects updater) : base (updater)
     {
-        SynchForEndPoint = "synchForServerEndPoint";
+        SynchForSocket = "synchForClientSocket";
         SynchForData = "synchForServerData";
+
+        SocketSetup();
+    }
+
+    private void SocketSetup()
+    {
+        IPAddress ipAddress = IPAddress.Parse(ServerAddress);
+        IPEndPoint remoteEp = new IPEndPoint(ipAddress, Port);
+
+        _clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp) {Blocking = false};
+        _clientSocket.Connect(remoteEp);
     }
 
     protected override void Send(object packet)
     {
-        Socket sendingSocket = null;
         try
         {
-            IPAddress ipAddress = IPAddress.Parse(ServerAddress); 
-            IPEndPoint remoteEP = new IPEndPoint(ipAddress, Port);
-
-
             byte[] bytes = Packet.ToBytes((Packet)packet);
-            sendingSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            sendingSocket.SendTo(bytes, bytes.Length, SocketFlags.None, remoteEP);
+            lock (SynchForSocket)
+            {
+                _clientSocket.Send(bytes);
+            }
         }
         catch (Exception e)
         {
             Debug.Log(e.ToString());
-        }
-        finally
-        {
-            if (sendingSocket != null)
-            {
-                sendingSocket.Close();
-            }
         }
 	}
 
@@ -42,23 +45,23 @@ public class PacketClient : PacketHandler
         // Data buffer for incoming data.
         var bytes = new byte[1024];
 
-        // TODO: check to see if we can fix the ip address here for security
-        EndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);   
-        Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-
         try
         {
-            socket.Blocking = false;
             while (KeepListening)
             {
-                if (socket.Available > 0)
+                lock (SynchForSocket)
                 {
-                	int retreivedData = socket.ReceiveFrom(bytes, ref endPoint);
-                    if (retreivedData > 0)
+                    if (_clientSocket.Available > 0)
                     {
-                        lock (SynchForData)
+                        int retreivedData = _clientSocket.Receive(bytes);
+                        if (retreivedData > 0)
                         {
-                            Data.Add(Packet.FromBytes(bytes));
+                            // TODO: protect against deadlocks! 
+                            // WARNING: lock inside lock: prime place for deadlocks
+                            lock (SynchForData)
+                            {
+                                Data.Add(Packet.FromBytes(bytes));
+                            }
                         }
                     }
                 }
@@ -68,9 +71,13 @@ public class PacketClient : PacketHandler
         {
             Debug.Log(e.ToString());
         }
-        finally
-        {
-            socket.Close();
-        }
+    }
+
+    public override void Dispose()
+    {
+        KeepListening = false;
+        _clientSocket.Close();
+
+        base.Dispose();
     }
 }

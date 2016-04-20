@@ -9,7 +9,7 @@ public abstract class PacketHandler : IPacketHandler, IDisposable
 {
     protected volatile bool KeepListening = true;
     protected readonly Thread ListenerThread;
-    protected string SynchForEndPoint;
+    protected string SynchForSocket;
     protected string SynchForData;
     protected const string ServerAddress = "192.168.0.6";
     protected const int Port = 11000;
@@ -72,7 +72,7 @@ public abstract class PacketHandler : IPacketHandler, IDisposable
         KeepListening = false;
     }
 
-    public void Dispose()
+    public virtual void Dispose()
     {
         RequestStopListening();
     }
