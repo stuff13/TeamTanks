@@ -1,7 +1,7 @@
-﻿public interface IPacketHandler
+﻿using System;
+
+public interface IPacketHandler : IDisposable
 {
     bool CheckAndHandleNewData();
-    void StartListening();
-    void RequestStopListening();
     void SendPacket(Packet packet);
 }

@@ -1,81 +1,102 @@
-﻿using UnityEngine;
+﻿
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 
-public class PacketServer : PacketHandler
+using UnityEngine;
+
+public class Server : PacketHandler
 {
-    private readonly Socket _serverSocket;
+    #region Private Members
 
-    public PacketServer(IUpdateObjects updater)
-        : base(updater)
+    private struct Client
     {
-        Debug.Assert(GameManager.IsMainThread, "Packet Server constructor is not on the main thread!");
-
-        SynchForSocket = "synchForServerSocket";
-        SynchForData = "synchForServerData";
-
-        _serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp) {Blocking = false};
-        // Establish the local endpoint for the _socket.
-        IPAddress ipAddress = IPAddress.Parse(ServerAddress);
-        IPEndPoint localEndPoint = new IPEndPoint(ipAddress, Port);
-        _serverSocket.Bind(localEndPoint);
+        public EndPoint EndPoint;
+        public string Name;
     }
 
-    protected override void Send(object packet)
+    private List<Client> _clientList;
+    private readonly byte[] _dataStream = new byte[1024];
+
+    #endregion
+
+    public Server(IUpdateObjects updater) : base(updater)
     {
-        lock (SynchForSocket)
-        {
-            if (!_serverSocket.Connected) return;
-            try
-            {
-                byte[] byteData = Packet.ToBytes((Packet)packet);
-                _serverSocket.Send(byteData);
-            }
-            catch (Exception e)
-            {
-                Debug.Log(e.ToString());
-            }
-        }
+        Listen();
     }
 
-    protected override void Listen()
+    #region Send And Receive
+    public void Listen()
     {
-        var bytes = new byte[1024];
-
         try
         {
-            while (KeepListening)
-            {
-                lock (SynchForSocket)
-                {
-                    if (_serverSocket.Available > 0)
-                    {
-                        int bytesReceived = _serverSocket.Receive(bytes);
+            _clientList = new List<Client>();
+            _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            IPEndPoint server = new IPEndPoint(IPAddress.Any, 30000);
+            _socket.Bind(server);
+            IPEndPoint clients = new IPEndPoint(IPAddress.Any, 0);
+            EndPoint epSender = clients;
+            _socket.BeginReceiveFrom(_dataStream, 0, _dataStream.Length, SocketFlags.None, ref epSender, ReceiveData, epSender);
 
-                        // TODO: protect against deadlocks! 
-                        // WARNING: lock inside lock: prime place for deadlocks
-                        lock (SynchForData)
+            Debug.Log("Listening");
+        }
+        catch (Exception ex)
+        {
+            Debug.Log("Load Error: " + ex.Message);
+        }
+    }
+
+    protected override void ReceiveData(IAsyncResult asyncResult)
+    {
+        try
+        {
+            Packet receivedData = new Packet(_dataStream);
+            IPEndPoint clients = new IPEndPoint(IPAddress.Any, 0);
+            EndPoint epSender = clients;
+            _socket.EndReceiveFrom(asyncResult, ref epSender);
+
+            switch (receivedData.DataId)
+            {
+                case Packet.DataIdentifier.Update:
+                    Data.Add(receivedData);
+                    break;
+
+                case Packet.DataIdentifier.Login:
+                    // Populate client object
+                    Client client = new Client { EndPoint = epSender };
+
+                    // Add client to list
+                    _clientList.Add(client);
+                    mainEndPoint = _clientList[0].EndPoint;
+                    Debug.Log("Login from " + client.EndPoint);
+                    break;
+
+                case Packet.DataIdentifier.LogOut:
+                    // Remove current client from list
+                    foreach (Client c in _clientList)
+                    {
+                        if (c.EndPoint.Equals(epSender))
                         {
-                            Data.Add(Packet.FromBytes(bytes));
+                            _clientList.Remove(c);
+                            break;
                         }
                     }
-                }
+
+                    Debug.Log(string.Format("-- {0} has gone offline --", epSender)); break;
             }
+
+            // Listen for more connections again...
+            _socket.BeginReceiveFrom(_dataStream, 0, _dataStream.Length, SocketFlags.None, ref epSender, ReceiveData, epSender);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            Debug.Log(e.ToString());
+            Console.WriteLine("ReceiveData Error: " + ex.Message);
         }
-
     }
 
-    public override void Dispose()
-    {
-        KeepListening = false;
-        _serverSocket.Close();
 
-        base.Dispose();
-    }
+    #endregion
+
 
 }
