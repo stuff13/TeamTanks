@@ -37,6 +37,7 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
         else // we're on an apple device
 	    {
             objectToUpdate = GameObject.Find("Tank");
+            Debug.Log("creating client packet.");
             dataHandler = new PacketClient(this);
 
   			UpdateObjectLocations(gun);	// initialise and give server client info
@@ -57,6 +58,14 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
         // update each one with new Location of gameObject
     }
 
+   void OnApplicationQuit()
+    {
+        if (dataHandler != null)
+        {
+            dataHandler.RequestStopListening();
+        }
+    }
+
     public void UpdateObjectLocations(GameObject currentGameObject)
     {
         var packet = new Packet
@@ -68,25 +77,10 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
         dataHandler.SendPacket(packet);
     }
 
-    // some way to connect from client
-
-    // some way to receive messages from clients: figure out new location of objects 
-
-    void OnApplicationQuit()
-    {
-        if (dataHandler != null)
-        {
-            dataHandler.RequestStopListening();
-        }
-
-        
-    }
-
     // updates from the client
     public void UpdatePacket(Packet updatedObject)
     {
         Debug.Assert(GameManager.IsMainThread);
-
         objectToUpdate.transform.localPosition = updatedObject.Location;
         objectToUpdate.transform.localRotation = updatedObject.Rotation;
     }

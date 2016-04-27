@@ -9,9 +9,9 @@ public abstract class PacketHandler : IPacketHandler, IDisposable
 {
     protected volatile bool KeepListening = true;
     protected readonly Thread ListenerThread;
-    protected string SynchForEndPoint;
+    protected string SynchForSocket;
     protected string SynchForData;
-    protected const string ServerAddress = "192.168.0.6";
+    protected const string ServerAddress = "192.168.2.42";
     protected const int Port = 11000;
     protected readonly IUpdateObjects Updater;
 
@@ -40,12 +40,7 @@ public abstract class PacketHandler : IPacketHandler, IDisposable
 
     public void SendPacket(Packet packet)
     {
-        ThreadPool.QueueUserWorkItem(Send, packet);
-//		Debug.Log(String.Format("Sending packet Rotation: x={0}, y={1}, z={2}",
-//			packet.Rotation.x, packet.Rotation.y, packet.Rotation.z));
-//		Debug.Log(String.Format("Sending packet Location: x={0}, y={1}, z={2}",
-//			packet.Location.x, packet.Location.y, packet.Location.z));
-
+        ThreadPool.QueueUserWorkItem(new WaitCallback(Send), packet);
     }
 
 
@@ -60,10 +55,10 @@ public abstract class PacketHandler : IPacketHandler, IDisposable
                 Data.RemoveAt(0);
             }
 
-			Debug.Log(String.Format("Received packet Rotation: x={0}, y={1}, z={2}",
-				newPacket.Rotation.x, newPacket.Rotation.y, newPacket.Rotation.z));
-			Debug.Log(String.Format("Received packet Location: x={0}, y={1}, z={2}",
-				newPacket.Location.x, newPacket.Location.y, newPacket.Location.z));
+            Debug.Log(String.Format("Received packet Rotation: x={0}, y={1}, z={2}",
+                newPacket.Rotation.x, newPacket.Rotation.y, newPacket.Rotation.z));
+            Debug.Log(String.Format("Received packet Location: x={0}, y={1}, z={2}",
+                newPacket.Location.x, newPacket.Location.y, newPacket.Location.z));
             Updater.UpdatePacket(newPacket);
 
             return true;
@@ -76,7 +71,7 @@ public abstract class PacketHandler : IPacketHandler, IDisposable
         KeepListening = false;
     }
 
-    public void Dispose()
+    public virtual void Dispose()
     {
         RequestStopListening();
     }
