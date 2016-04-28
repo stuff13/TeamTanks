@@ -17,6 +17,7 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
     private IPacketHandler dataHandler;
 
     [SerializeField] private GameObject gun;
+    [SerializeField] private GameObject bullet;
     public Dictionary<int, GameObject> GameCatalog { get; private set; }
 
     private bool isServer;
@@ -118,6 +119,51 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
             target.transform.localRotation = updatedObject.Rotation;
         }
     }
+
+    public void InsertObject(GameObject newObject)
+    {
+        int id = GameCatalog.Max(x => x.Key)+1;
+        GameCatalog.Add(id, newObject);
+        var packet = new Packet
+        {
+            DataId = Packet.DataIdentifier.Create,
+            ObjectId = id,
+            Location = newObject.transform.localPosition,
+            Rotation = newObject.transform.localRotation,
+        };
+        dataHandler.SendPacket(packet);
+    }
+
+    public void InsertBullet(Packet packet)
+    {
+        GameObject newObject = Instantiate(bullet);
+        newObject.transform.position = packet.Location;
+        newObject.transform.rotation = packet.Rotation;
+
+        GameCatalog.Add(packet.ObjectId, newObject);
+    }
+
+    public void RemoveObject(GameObject newObject)
+    {
+        int id = GameCatalog.First(x => x.Value.name == newObject.name).Key;
+        GameCatalog.Remove(id);
+
+        var packet = new Packet
+        {
+            DataId = Packet.DataIdentifier.Destroy,
+            ObjectId = id
+        };
+        dataHandler.SendPacket(packet);
+    }
+
+    public void RemoveBullet(Packet packet)
+    {
+        GameObject objectToRemove = GameCatalog[packet.ObjectId];
+        Instantiate(Resources.Load("ExplosionMobile"), objectToRemove.transform.position, objectToRemove.transform.rotation);
+        GameCatalog.Remove(packet.ObjectId);
+
+        Destroy(objectToRemove);
+    }
 }
 
 
@@ -128,4 +174,6 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
 public interface IUpdateObjects
 {
 	void UpdatePacket(Packet thing);
+    void InsertBullet(Packet packet);
+    void RemoveBullet(Packet packet);
 }

@@ -14,12 +14,14 @@ public struct Packet
 
     public enum DataIdentifier
     {
+        Null,
         Update,
+        Create,
+        Destroy,
         Login,
         LogOut,
         Fire,
-        Ack,
-        Null
+        Ack
     }
 
     public DataIdentifier DataId;

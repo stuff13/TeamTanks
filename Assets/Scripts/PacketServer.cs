@@ -83,7 +83,14 @@ public class Server : PacketHandler
                         }
                     }
 
-                    Debug.Log(string.Format("-- {0} has gone offline --", epSender)); break;
+                    Debug.Log(string.Format("-- {0} has gone offline --", epSender));
+                    break;
+                case Packet.DataIdentifier.Create:
+                    Updater.InsertBullet(receivedData);
+                    break;
+                case Packet.DataIdentifier.Destroy:
+                    Updater.RemoveBullet(receivedData);
+                    break;
             }
 
             // Listen for more connections again...
