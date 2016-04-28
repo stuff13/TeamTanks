@@ -1,75 +1,88 @@
-﻿using UnityEngine;
+﻿
 using System;
 using System.Net;
 using System.Net.Sockets;
+using UnityEngine;
 
-public class PacketClient : PacketHandler
+public class Client : PacketHandler
 {
-    public PacketClient(IUpdateObjects updater) : base (updater)
+    #region Private Members
+    protected string serverIpAddress = "192.168.2.42";
+    private byte[] dataStream = new byte[1024];
+
+    #endregion
+
+    public Client(IUpdateObjects updater) : base(updater)
     {
-        SynchForEndPoint = "synchForServerEndPoint";
-        SynchForData = "synchForServerData";
+        Connect();
     }
 
-    protected override void Send(object packet)
+ 
+    public override void Dispose()
     {
-        Socket sendingSocket = null;
         try
         {
-            IPAddress ipAddress = IPAddress.Parse(ServerAddress); 
-            IPEndPoint remoteEP = new IPEndPoint(ipAddress, Port);
-
-            byte[] bytes = Packet.ToBytes((Packet)packet);
-            sendingSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            sendingSocket.SendTo(bytes, bytes.Length, SocketFlags.None, remoteEP);
-        }
-        catch (Exception e)
-        {
-            Debug.Log(e.ToString());
-        }
-        finally
-        {
-            if (sendingSocket != null)
+            if (_socket != null)
             {
-                sendingSocket.Close();
+                Packet sendData = new Packet { DataId = Packet.DataIdentifier.LogOut,};
+                byte[] byteData = Packet.ToBytes(sendData);
+
+                _socket.SendTo(byteData, 0, byteData.Length, SocketFlags.None, mainEndPoint);
+                _socket.Close();
             }
         }
-	}
+        catch (Exception ex)
+        {
+            Console.WriteLine("Closing Error: " + ex.Message);
+        }
 
-    protected override void Listen()
+        base.Dispose();
+    }
+
+    private void Connect()
     {
-        // Data buffer for incoming data.
-        var bytes = new byte[1024];
-
-        // TODO: check to see if we can fix the ip address here for security
-        EndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);   
-        Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-
         try
         {
-            socket.Blocking = false;
-            while (KeepListening)
-            {
-                if (socket.Available > 0)
-                {
-                	int retreivedData = socket.ReceiveFrom(bytes, ref endPoint);
-                    if (retreivedData > 0)
-                    {
-                        lock (SynchForData)
-                        {
-                            Data.Add(Packet.FromBytes(bytes));
-                        }
-                    }
-                }
-            }
+            _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            IPAddress serverIp = IPAddress.Parse(serverIpAddress);
+            IPEndPoint server = new IPEndPoint(serverIp, 30000);
+            mainEndPoint = server;
+
+            Packet sendData = new Packet { DataId = Packet.DataIdentifier.Login };
+            byte[] data = Packet.ToBytes(sendData);
+            _socket.BeginSendTo(data, 0, data.Length, SocketFlags.None, mainEndPoint, SendData, null);
+
+            dataStream = new byte[1024];
+            _socket.BeginReceiveFrom(dataStream, 0, dataStream.Length, SocketFlags.None, ref mainEndPoint, ReceiveData, null);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            Debug.Log(e.ToString());
-        }
-        finally
-        {
-            socket.Close();
+            Console.WriteLine("Connection Error: " + ex.Message);
         }
     }
+
+    #region Send And Receive
+
+    protected override void ReceiveData(IAsyncResult ar)
+    {
+        try
+        {
+            _socket.EndReceive(ar);
+            Packet receivedData = new Packet(dataStream);
+            Data.Add(receivedData);
+
+            // Reset data stream
+            dataStream = new byte[1024];
+            _socket.BeginReceiveFrom(dataStream, 0, dataStream.Length, SocketFlags.None, ref mainEndPoint, ReceiveData, null);
+        }
+        catch (ObjectDisposedException)
+        { }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Receive Data: " + ex.Message);
+        }
+    }
+
+        #endregion
+
 }

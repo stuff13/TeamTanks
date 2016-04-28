@@ -11,10 +11,10 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
 
     public static NetworkController Instance { get; private set; }
 
-    private PacketServer listener;
-    private PacketClient sender;
+    private Server listener;
+    private Client sender;
 
-    private PacketHandler dataHandler;
+    private IPacketHandler dataHandler;
     private GameObject objectToUpdate;
     [SerializeField] private GameObject gun;
 
@@ -30,20 +30,18 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
         
         if (SystemInfo.operatingSystem.Contains("Windows"))
 	    {
-			objectToUpdate = gun;
-            dataHandler = new PacketServer(this);
-
+            dataHandler = new Server(this);
+	        objectToUpdate = gun;
 	    }
         else // we're on an apple device
 	    {
             objectToUpdate = GameObject.Find("Tank");
             Debug.Log("creating client packet.");
-            dataHandler = new PacketClient(this);
 
-  			UpdateObjectLocations(gun);	// initialise and give server client info
+            dataHandler = new Client(this);
+			UpdateObjectLocations(gun);	// initialise and give server client info
         }
 
-		dataHandler.StartListening();
     }
 	
 	// Update is called once per frame
@@ -60,10 +58,7 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
 
    void OnApplicationQuit()
     {
-        if (dataHandler != null)
-        {
-            dataHandler.RequestStopListening();
-        }
+        dataHandler.Dispose();
     }
 
     public void UpdateObjectLocations(GameObject currentGameObject)
