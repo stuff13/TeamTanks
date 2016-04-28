@@ -37,7 +37,7 @@ public struct Packet
     public static void WriteToStream(Packet toWrite, Stream where)
     {
         BinaryWriter writer = new BinaryWriter(where);
-        writer.Write((Int32)DataIdentifier.Update);
+        writer.Write((Int32)toWrite.DataId);
         writer.Write((Int32)toWrite.ObjectId);
         writer.Write(toWrite.Location.x);
         writer.Write(toWrite.Location.y);
