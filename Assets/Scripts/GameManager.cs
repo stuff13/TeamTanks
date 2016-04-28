@@ -11,10 +11,10 @@ public class GameManager : MonoBehaviour
     //	[SerializeField] private float maxGunAngle = 50.0f;   // angle from horizon
     //	[SerializeField] private float turretSpeed = 2.0f;
 
-	private bool onApple = false;
+	private bool isServer = false;
     static int mainThreadId;
 
-    public static bool IsServer { get { return !Instance.onApple; } }
+    public static bool IsServer { get { return Instance.isServer; } }
     public CardboardHead Head { get; set; }
 
     void Start () 
@@ -31,9 +31,9 @@ public class GameManager : MonoBehaviour
 		}
 
 		Debug.Log(SystemInfo.operatingSystem);
-	    onApple = !SystemInfo.operatingSystem.Contains("Windows");
+	    isServer = SystemInfo.operatingSystem.Contains("Windows");
 
-	    if (onApple)
+	    if (isServer)
 	    {
 	        Cardboard.Create();
 	        mainCamera.SetActive(false);
@@ -53,14 +53,4 @@ public class GameManager : MonoBehaviour
 	    }
 	}
 
-	void Update () 
-	{
-	}
-
-
-    // If called in the non main thread, will return false;
-    public static bool IsMainThread
-    {
-        get { return System.Threading.Thread.CurrentThread.ManagedThreadId == mainThreadId; }
-    }
 }

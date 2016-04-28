@@ -23,11 +23,9 @@ public struct Packet
     }
 
     public DataIdentifier DataId;
-
     public int ObjectId; // id mapped to name of object
 
     public Vector3 Location; // current Location
-
     // public Vector3 Velocity;    // current Velocity <== can I use this if I don't have full synchronisation on client and server
     public Quaternion Rotation; // current orientation
 

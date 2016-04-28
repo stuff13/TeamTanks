@@ -17,12 +17,7 @@ public class Gun : MonoBehaviour {
 		{
 			// fire
 			Vector3 spawnVector = new Vector3(spawnPoint.position.x, spawnPoint.position.y, spawnPoint.position.z);
-			// GameObject clone;
 			Instantiate(projectile, spawnVector, spawnPoint.rotation);
-			// clone.velocity = spawnVector * bulletSpeed;
-
-//			clone.AddForce(clone.transform.forward * bulletSpeed);
-//			Physics.IgnoreCollision(clone.GetComponent<Collider>(), GetComponent<Collider>());
 		}
 	}
 }
