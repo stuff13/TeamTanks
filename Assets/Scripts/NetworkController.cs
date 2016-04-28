@@ -15,7 +15,6 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
     private Server listener;
     private Client sender;
     private IPacketHandler dataHandler;
-    private GameObject objectToUpdate;
 
     [SerializeField] private GameObject gun;
     public Dictionary<int, GameObject> GameCatalog { get; private set; }
@@ -48,18 +47,7 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
         GameCatalog.Add(++id, GameObject.Find("Cube (7)"));     // 10
 
         isServer = SystemInfo.operatingSystem.Contains("Windows");
-        if (isServer)
-	    {
-            dataHandler = new Server(this);
-	        objectToUpdate = gun;
-	    }
-        else // we're on an apple device
-	    {
-            objectToUpdate = GameObject.Find("Tank");
-            dataHandler = new Client(this);
-
-            Debug.Log("creating client packet.");
-        }
+		dataHandler = isServer ? (IPacketHandler)new Server(this) : (IPacketHandler)new Client(this);
     }
 	
 	// Update is called once per frame

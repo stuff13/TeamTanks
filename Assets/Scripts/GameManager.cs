@@ -12,15 +12,12 @@ public class GameManager : MonoBehaviour
     //	[SerializeField] private float turretSpeed = 2.0f;
 
 	private bool isServer = false;
-    static int mainThreadId;
 
     public static bool IsServer { get { return Instance.isServer; } }
     public CardboardHead Head { get; set; }
 
     void Start () 
 	{
-        mainThreadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
-
         if (Instance == null)
 		{
 			Instance = this;
