@@ -33,24 +33,24 @@ public class GameManager : MonoBehaviour
 		Debug.Log(SystemInfo.operatingSystem);
 	    isServer = SystemInfo.operatingSystem.Contains("Windows");
 
-	    if (isServer)
-	    {
-	        Cardboard.Create();
-	        mainCamera.SetActive(false);
+        if (isServer)
+        {
+            mainCamera.SetActive(true);
+            turretCamera.GetComponent<Camera>().enabled = false;
+            turretCamera.GetComponent<CardboardHead>().enabled = false;
+            turretCamera.GetComponent<AudioListener>().enabled = false;
+            GetComponent<Cardboard>().VRModeEnabled = false;
+        }
+        else
+        {
+            Cardboard.Create();
+            mainCamera.SetActive(false);
             Head = turretCamera.GetComponent<StereoController>().Head;
-	        turretCamera.GetComponent<Camera>().enabled = true;
+            turretCamera.GetComponent<Camera>().enabled = true;
             turretCamera.GetComponent<CardboardHead>().enabled = true;
             turretCamera.GetComponent<AudioListener>().enabled = true;
             GetComponent<Cardboard>().VRModeEnabled = true;
-	    }
-	    else
-	    {
-	        mainCamera.SetActive(true);
-	        turretCamera.GetComponent<Camera>().enabled = false;
-	        turretCamera.GetComponent<CardboardHead>().enabled = false;
-            turretCamera.GetComponent<AudioListener>().enabled = false;
-            GetComponent<Cardboard>().VRModeEnabled = false;
-	    }
+        }
 	}
 
 }
