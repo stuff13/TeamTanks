@@ -58,7 +58,10 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
 
    void OnApplicationQuit()
     {
-        dataHandler.Dispose();
+    	if(dataHandler != null)
+    	{
+			dataHandler.Dispose();
+    	}
     }
 
     public void UpdateObjectLocations(GameObject currentGameObject)
