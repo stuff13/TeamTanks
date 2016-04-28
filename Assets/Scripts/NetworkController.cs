@@ -65,6 +65,7 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
     {
         var packet = new Packet
                          {
+                             DataId = Packet.DataIdentifier.Update,
                              Location = currentGameObject.transform.localPosition,
                              Rotation = currentGameObject.transform.localRotation,
                          };

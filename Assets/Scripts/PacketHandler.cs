@@ -78,7 +78,6 @@ public abstract class PacketHandler : IPacketHandler
         if (_socket != null)
         {
             _socket.Close();
-//            _socket.Dispose();
         }
     }
 
