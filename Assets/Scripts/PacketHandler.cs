@@ -19,6 +19,7 @@ public abstract class PacketHandler : IPacketHandler
     protected PacketHandler(IUpdateObjects updater)
     {
         Updater = updater;
+        Data = new List<Packet>();
     }
 
     protected abstract void ReceiveData(IAsyncResult asyncResult);
@@ -78,7 +79,6 @@ public abstract class PacketHandler : IPacketHandler
         if (_socket != null)
         {
             _socket.Close();
-            _socket.Dispose();
         }
     }
 
