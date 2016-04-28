@@ -3,7 +3,6 @@ using System.Collections;
 
 public class Gun : MonoBehaviour {
 	[SerializeField] private Transform projectile = null;
-	[SerializeField] float bulletSpeed = 10;
 	[SerializeField] Transform spawnPoint = null;
 
 	// Use this for initialization
