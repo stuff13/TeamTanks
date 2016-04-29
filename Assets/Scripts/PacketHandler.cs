@@ -6,103 +6,105 @@ using System.Net.Sockets;
 
 using UnityEngine;
 
-public abstract class PacketHandler : IPacketHandler
+namespace Assets.Scripts
 {
-    //TODO: convert to dictionary keyed on object Id. Dictionary<int, Queue<Packet>> 
-    // use id, get Queue, take the packets one by one from the list till they are empty
-    // each id will be responsible for their own packets
-    protected Queue<Packet> UpdateData;      // These three collections are used to avoid calling Unity functions
-    protected Queue<Packet> CreateData;     // while on a background thread. It appears that Asynch Sockets calls
-    protected Queue<Packet> RemoveData;     // run some of them on another thread!
-    protected string CreateDataSynch = "createDataSynch";
-    protected string RemoveDataSynch = "removeDataSynch";
-    protected EndPoint MainEndPoint;
-    protected readonly IUpdateObjects Updater;
-    protected Socket MainSocket;
-
-    protected PacketHandler(IUpdateObjects updater)
+    public abstract class PacketHandler : IPacketHandler
     {
-        Updater = updater;
-        UpdateData = new Queue<Packet>();
-        CreateData = new Queue<Packet>();
-        RemoveData = new Queue<Packet>();
-    }
+        //TODO: convert to dictionary keyed on object Id. Dictionary<int, Queue<Packet>> 
+        // use id, get Queue, take the packets one by one from the list till they are empty
+        // each id will be responsible for their own packets
+        protected Queue<Packet> UpdateData;      // These three collections are used to avoid calling Unity functions
+        protected Queue<Packet> CreateData;     // while on a background thread. It appears that Asynch Sockets calls
+        protected Queue<Packet> RemoveData;     // run some of them on another thread!
+        protected string CreateDataSynch = "createDataSynch";
+        protected string RemoveDataSynch = "removeDataSynch";
+        protected EndPoint MainEndPoint;
+        protected readonly IUpdateObjects Updater;
+        protected Socket MainSocket;
 
-    protected abstract void ReceiveData(IAsyncResult asyncResult);
+        protected PacketHandler(IUpdateObjects updater)
+        {
+            Updater = updater;
+            UpdateData = new Queue<Packet>();
+            CreateData = new Queue<Packet>();
+            RemoveData = new Queue<Packet>();
+        }
 
-    private static int messageId;
-    public void SendPacket(Packet packet)
-    {
-        if (MainEndPoint != null)
+        protected abstract void ReceiveData(IAsyncResult asyncResult);
+
+        private static int messageId;
+        public void SendPacket(Packet packet)
+        {
+            if (MainEndPoint != null)
+            {
+                try
+                {
+                    if (packet.PacketId == 0)
+                    {
+                        packet.PacketId = ++messageId;
+                    }
+                    byte[] data = Packet.ToBytes(packet);
+                    MainSocket.BeginSendTo(data, 0, data.Length, SocketFlags.None,
+                        MainEndPoint, FinishSendingData, MainEndPoint);
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log("Send Error: " + ex.Message);
+                }
+            }
+        }
+
+        public void FinishSendingData(IAsyncResult asyncResult)
         {
             try
             {
-                if (packet.PacketId == 0)
-                {
-                    packet.PacketId = ++messageId;
-                }
-                byte[] data = Packet.ToBytes(packet);
-                MainSocket.BeginSendTo(data, 0, data.Length, SocketFlags.None,
-                    MainEndPoint, FinishSendingData, MainEndPoint);
+                MainSocket.EndSend(asyncResult);
             }
             catch (Exception ex)
             {
-                Debug.Log("Send Error: " + ex.Message);
+                Debug.Log("SendData Error: " + ex.Message);
             }
         }
-    }
 
-    public void FinishSendingData(IAsyncResult asyncResult)
-    {
-        try
+        public bool CheckAndHandleNewData()
         {
-            MainSocket.EndSend(asyncResult);
-        }
-        catch (Exception ex)
-        {
-            Debug.Log("SendData Error: " + ex.Message);
-        }
-    }
-
-    public bool CheckAndHandleNewData()
-    {
-        try
-        {
-            if (UpdateData.Any())
+            try
             {
-                var newPacket = UpdateData.Dequeue();
-                Updater.UpdatePacket(newPacket);
+                if (UpdateData.Any())
+                {
+                    var newPacket = UpdateData.Dequeue();
+                    Updater.UpdatePacket(newPacket);
 
-                return true;
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.Log("SendData Error: " + ex.Message);
+            }
+            return false;
+        }
+
+        public void Acknowledge(Packet packetToAcknowledge)
+        {
+            Packet ackPacket = new Packet
+                                   {
+                                       PacketType = Packet.PacketTypeEnum.Ack,
+                                       PacketId = packetToAcknowledge.PacketId,
+                                       ObjectId = packetToAcknowledge.ObjectId
+                                   };
+            SendPacket(ackPacket);
+            Debug.Log("Acknowledging Packet #" +  packetToAcknowledge.PacketId);
+        }
+
+        public virtual void Dispose()
+        {
+            if (MainSocket != null)
+            {
+                MainSocket.Close();
             }
         }
-        catch (Exception ex)
-        {
-            Debug.Log("SendData Error: " + ex.Message);
-        }
-        return false;
-    }
 
-    public void Acknowledge(Packet packetToAcknowledge)
-    {
-        Packet ackPacket = new Packet
-                               {
-                                   PacketType = Packet.PacketTypeEnum.Ack,
-                                   PacketId = packetToAcknowledge.PacketId,
-                                   ObjectId = packetToAcknowledge.ObjectId
-                               };
-        SendPacket(ackPacket);
-        Debug.Log("Acknowledging Packet #" +  packetToAcknowledge.PacketId);
+        public virtual bool CheckAndCreate() { return false; }
     }
-
-    public virtual void Dispose()
-    {
-        if (MainSocket != null)
-        {
-            MainSocket.Close();
-        }
-    }
-
-    public virtual bool CheckAndCreate() { return false; }
-    public virtual bool CheckAndRemove() { return false; }
 }

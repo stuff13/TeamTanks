@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using Assets.Scripts;
+
+using UnityEngine;
 
 public class PCPlayerController : MonoBehaviour
 {

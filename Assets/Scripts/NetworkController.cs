@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 
+using Assets.Scripts;
+
 using UnityEngine;
 
 public class NetworkController : MonoBehaviour, IUpdateObjects
@@ -10,11 +12,11 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
 
     [SerializeField] private GameObject gun = null;
     [SerializeField] private GameObject bullet = null;
-    public Dictionary<int, GameObject> GameCatalog { get; private set; }
+    public Dictionary<int, ObjectHistory> GameCatalog { get; private set; }
+    public Dictionary<GameObject, int> IndexList { get; set; }
 
     private IPacketHandler _dataHandler;
     private bool _isServer;
-
 
     void Start ()
     {
@@ -27,20 +29,20 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
             }
             Instance = this;
 
-            GameCatalog = new Dictionary<int, GameObject>();
+            GameCatalog = new Dictionary<int, ObjectHistory>();
 
             // list of Windows server objects
             int id = 0;
-            GameCatalog.Add(++id, GameObject.Find("Tank"));
-            GameCatalog.Add(++id, GameObject.Find("Turret Camera"));
-            GameCatalog.Add(++id, GameObject.Find("Cube"));         // 3
-            GameCatalog.Add(++id, GameObject.Find("Cube (1)"));     // 4
-            GameCatalog.Add(++id, GameObject.Find("Cube (2)"));     // 5
-            GameCatalog.Add(++id, GameObject.Find("Cube (3)"));     // 6
-            GameCatalog.Add(++id, GameObject.Find("Cube (4)"));     // 7
-            GameCatalog.Add(++id, GameObject.Find("Cube (5)"));     // 8
-            GameCatalog.Add(++id, GameObject.Find("Cube (6)"));     // 9
-            GameCatalog.Add(++id, GameObject.Find("Cube (7)"));     // 10
+            GameCatalog.Add(++id, new ObjectHistory(GameObject.Find("Tank"), id));
+            GameCatalog.Add(++id, new ObjectHistory(GameObject.Find("Turret Camera"), id));
+            GameCatalog.Add(++id, new ObjectHistory(GameObject.Find("Cube"), id));         // 3
+            GameCatalog.Add(++id, new ObjectHistory(GameObject.Find("Cube (1)"), id));     // 4
+            GameCatalog.Add(++id, new ObjectHistory(GameObject.Find("Cube (2)"), id));     // 5
+            GameCatalog.Add(++id, new ObjectHistory(GameObject.Find("Cube (3)"), id));     // 6
+            GameCatalog.Add(++id, new ObjectHistory(GameObject.Find("Cube (4)"), id));     // 7
+            GameCatalog.Add(++id, new ObjectHistory(GameObject.Find("Cube (5)"), id));     // 8
+            GameCatalog.Add(++id, new ObjectHistory(GameObject.Find("Cube (6)"), id));     // 9
+            GameCatalog.Add(++id, new ObjectHistory(GameObject.Find("Cube (7)"), id));     // 10
 
             _isServer = SystemInfo.operatingSystem.Contains("Windows");
             _dataHandler = _isServer ? (IPacketHandler)new Server(this) : new Client(this);
@@ -63,7 +65,7 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
                 // will update all the cubes
                 for (int i = CubeMin; i <= CubeMax; i++)
 	            {
-	                UpdateObjectLocations(GameCatalog[i], i);
+	                UpdateObjectLocations(GameCatalog[i].UnityObject, i);
 	            }
             }
 	        else
@@ -73,14 +75,13 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
 	            {
 	                if (entry.Key > CubeMax)
 	                {
-	                    UpdateObjectLocations(entry.Value, entry.Key);
+	                    UpdateObjectLocations(entry.Value.UnityObject, entry.Key);
                     }
                 }
 	        }
 
             while (_dataHandler.CheckAndHandleNewData()) { }
 	        while (_dataHandler.CheckAndCreate())        { }
-            //while (_dataHandler.CheckAndRemove())        { }
         }
         catch (Exception ex)
         {
@@ -97,16 +98,22 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
     	}
     }
 
+    /// <summary>
+    /// Notifications going OUT onto the network
+    /// </summary>
+    /// <param name="currentGameObject"></param>
+    /// <param name="id"></param>
     public void UpdateObjectLocations(GameObject currentGameObject, int id = 0)
     {
         try
         { 
             if (id == 0)
             {
-                id = GameCatalog.First(x => x.Value.name == currentGameObject.name).Key;
+                id = GameCatalog.First(x => x.Value.UnityObject.name == currentGameObject.name).Key;
             }
             var packet = new Packet(currentGameObject, Packet.PacketTypeEnum.Update, 0, id);
             _dataHandler.SendPacket(packet);
+            GameCatalog[id].AddHistoricalPacket(packet);
         }
         catch (Exception ex)
         {
@@ -115,16 +122,24 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
     }
 
 
-    // updates from the client
+    /// <summary>
+    /// notifications coming In from the network
+    /// </summary>
+    /// <param name="updatedObject"></param>
     public void UpdatePacket(Packet updatedObject)
     {
         try
         { 
-            GameObject target;
+            ObjectHistory target;
             if (GameCatalog.TryGetValue(updatedObject.ObjectId, out target))
             {
-                target.transform.localPosition = updatedObject.Position;
-                target.transform.localRotation = updatedObject.Rotation;
+                target.UnityObject.transform.localPosition = updatedObject.Position;
+                target.UnityObject.transform.localRotation = updatedObject.Rotation;
+            }
+            ObjectHistory history;
+            if (GameCatalog.TryGetValue(updatedObject.PacketId, out history))    // we have to check for it as this object may no longer exist
+            {
+                history.AddHistoricalPacket(updatedObject);
             }
         }
         catch (Exception ex)
@@ -137,11 +152,13 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
     {
         try
         {
-            if (GameCatalog.Values.Contains(newObject)) return; // we've already done this
+            if (GameCatalog.Values.Any(x => x.UnityObject == newObject)) return; // we've already done this
 
             int id = GameCatalog.Max(x => x.Key) + 1;
-            GameCatalog.Add(id, newObject);
+            var history = new ObjectHistory(newObject, id);
+            GameCatalog.Add(id, history);
             var packet = new Packet(newObject, Packet.PacketTypeEnum.Create, 0, id);
+            history.AddHistoricalPacket(packet);
             _dataHandler.SendPacket(packet);
         }
         catch (Exception ex)
@@ -157,7 +174,9 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
             var gunScript = gun.GetComponent<Gun>();
             GameObject newObject = gunScript.Fire(packet.Position, packet.Rotation);
 
-            GameCatalog.Add(packet.ObjectId, newObject);
+            var history = new ObjectHistory(newObject, packet.ObjectId);
+            GameCatalog.Add(packet.ObjectId, history);
+            GameCatalog[packet.ObjectId].AddHistoricalPacket(packet);
         }
         catch (Exception ex)
         {
@@ -171,13 +190,35 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
     {
         try
         {
-            int id = GameCatalog.FirstOrDefault(x => x.Value.name == newObject.name).Key;
-            GameCatalog.Remove(id);
+            int id = GetObjectId(newObject);
+            if (id != 0)
+            {
+                GameCatalog.Remove(id);
+            }
         }
         catch (Exception ex)
         {
             Debug.Log("RemoveObject Error: " + ex.Message);
         }
+    }
+
+    private int GetObjectId(GameObject target)
+    {
+        try
+        {
+            return GameCatalog.First(x => x.Value.UnityObject.name == target.name).Key;
+        }
+        catch (Exception ex)
+        {
+            return 0;
+        }
+    }
+
+    private bool IsServerObject(int objectId)
+    {
+        int[] objectsHandledOnServer = { 1, 3, 4, 5, 6, 7, 8, 9, 10 };
+
+        return objectsHandledOnServer.Contains(objectId);
     }
 }
 
