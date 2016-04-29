@@ -1,6 +1,7 @@
 ﻿
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 
@@ -10,13 +11,7 @@ public class Server : PacketHandler
 {
     #region Private Members
 
-    private struct Client
-    {
-        public EndPoint EndPoint;
-        public string Name;
-    }
-
-    private List<Client> _clientList;
+    private List<EndPoint> _clientList;
     private readonly byte[] _dataStream = new byte[1024];
 
     #endregion
@@ -31,13 +26,13 @@ public class Server : PacketHandler
     {
         try
         {
-            _clientList = new List<Client>();
-            _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            _clientList = new List<EndPoint>();
+            MainSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             IPEndPoint server = new IPEndPoint(IPAddress.Any, 30000);
-            _socket.Bind(server);
+            MainSocket.Bind(server);
             IPEndPoint clients = new IPEndPoint(IPAddress.Any, 0);
             EndPoint epSender = clients;
-            _socket.BeginReceiveFrom(_dataStream, 0, _dataStream.Length, SocketFlags.None, ref epSender, ReceiveData, epSender);
+            MainSocket.BeginReceiveFrom(_dataStream, 0, _dataStream.Length, SocketFlags.None, ref epSender, ReceiveData, epSender);
 
             Debug.Log("Listening");
         }
@@ -54,29 +49,29 @@ public class Server : PacketHandler
             Packet receivedData = new Packet(_dataStream);
             IPEndPoint clients = new IPEndPoint(IPAddress.Any, 0);
             EndPoint epSender = clients;
-            _socket.EndReceiveFrom(asyncResult, ref epSender);
+            MainSocket.EndReceiveFrom(asyncResult, ref epSender);
 
             switch (receivedData.DataId)
             {
                 case Packet.DataIdentifier.Update:
-                    Data.Add(receivedData);
+                    UpdateData.Enqueue(receivedData);
                     break;
 
                 case Packet.DataIdentifier.Login:
                     // Populate client object
-                    Client client = new Client { EndPoint = epSender };
+                    EndPoint client = epSender;
 
                     // Add client to list
                     _clientList.Add(client);
-                    mainEndPoint = _clientList[0].EndPoint;
-                    Debug.Log("Login from " + client.EndPoint);
+                    MainEndPoint = _clientList[0];
+                    Debug.Log("Login from " + client);
                     break;
 
                 case Packet.DataIdentifier.LogOut:
                     // Remove current client from list
-                    foreach (Client c in _clientList)
+                    foreach (EndPoint c in _clientList)
                     {
-                        if (c.EndPoint.Equals(epSender))
+                        if (c.Equals(epSender))
                         {
                             _clientList.Remove(c);
                             break;
@@ -86,22 +81,58 @@ public class Server : PacketHandler
                     Debug.Log(string.Format("-- {0} has gone offline --", epSender));
                     break;
                 case Packet.DataIdentifier.Create:
-                    Updater.InsertBullet(receivedData);
+                    lock (CreateDataSynch)
+                    {
+                        CreateData.Enqueue(receivedData);
+                    }
                     break;
                 case Packet.DataIdentifier.Destroy:
-                    Updater.RemoveBullet(receivedData);
+                    lock (RemoveDataSynch)
+                    {
+                        RemoveData.Enqueue(receivedData);
+                    }
                     break;
             }
 
             // Listen for more connections again...
-            _socket.BeginReceiveFrom(_dataStream, 0, _dataStream.Length, SocketFlags.None, ref epSender, ReceiveData, epSender);
+            MainSocket.BeginReceiveFrom(_dataStream, 0, _dataStream.Length, SocketFlags.None, ref epSender, ReceiveData, epSender);
         }
         catch (Exception ex)
         {
-            Console.WriteLine("ReceiveData Error: " + ex.Message);
+            Debug.Log("ReceiveData Error: " + ex.Message);
         }
     }
 
+    public override bool CheckAndCreate()
+    {
+        lock (CreateDataSynch)
+        {
+            if (CreateData.Any())
+            {
+                var newPacket = CreateData.Dequeue();
+                Updater.InsertBullet(newPacket);
 
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public override bool CheckAndRemove()
+    {
+        lock (RemoveDataSynch)
+        {
+            if (RemoveData.Any())
+            {
+                var newPacket = RemoveData.Dequeue();
+                Updater.RemoveBullet(newPacket);
+
+                return true;
+            }
+        }
+
+        return false;
+    }
     #endregion
 }

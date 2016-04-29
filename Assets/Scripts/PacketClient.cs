@@ -16,73 +16,69 @@ public class Client : PacketHandler
     {
         Connect();
     }
-
  
-    public override void Dispose()
-    {
-        try
-        {
-            if (_socket != null)
-            {
-                Packet sendData = new Packet { DataId = Packet.DataIdentifier.LogOut,};
-                byte[] byteData = Packet.ToBytes(sendData);
-
-                _socket.SendTo(byteData, 0, byteData.Length, SocketFlags.None, mainEndPoint);
-                _socket.Close();
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("Closing Error: " + ex.Message);
-        }
-
-        base.Dispose();
-    }
-
     private void Connect()
     {
         try
         {
-            _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            MainSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             IPAddress serverIp = IPAddress.Parse(serverIpAddress);
             IPEndPoint server = new IPEndPoint(serverIp, 30000);
-            mainEndPoint = server;
+            MainEndPoint = server;
 
             Packet sendData = new Packet { DataId = Packet.DataIdentifier.Login };
             byte[] data = Packet.ToBytes(sendData);
-            _socket.BeginSendTo(data, 0, data.Length, SocketFlags.None, mainEndPoint, SendData, null);
+            MainSocket.BeginSendTo(data, 0, data.Length, SocketFlags.None, MainEndPoint, SendData, null);
 
             dataStream = new byte[1024];
-            _socket.BeginReceiveFrom(dataStream, 0, dataStream.Length, SocketFlags.None, ref mainEndPoint, ReceiveData, null);
+            MainSocket.BeginReceiveFrom(dataStream, 0, dataStream.Length, SocketFlags.None, ref MainEndPoint, ReceiveData, null);
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Connection Error: " + ex.Message);
+            Debug.Log("Connection Error: " + ex.Message);
         }
     }
 
+    public override void Dispose()
+    {
+        try
+        {
+            if (MainSocket != null)
+            {
+                Packet sendData = new Packet { DataId = Packet.DataIdentifier.LogOut, };
+                byte[] byteData = Packet.ToBytes(sendData);
+
+                MainSocket.SendTo(byteData, 0, byteData.Length, SocketFlags.None, MainEndPoint);
+                MainSocket.Close();
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.Log("Closing Error: " + ex.Message);
+        }
+
+        base.Dispose();
+    }
     #region Send And Receive
 
     protected override void ReceiveData(IAsyncResult ar)
     {
         try
         {
-            _socket.EndReceive(ar);
+            MainSocket.EndReceive(ar);
             Packet receivedData = new Packet(dataStream);
-            Data.Add(receivedData);
+            UpdateData.Enqueue(receivedData);
 
             // Reset data stream
             dataStream = new byte[1024];
-            _socket.BeginReceiveFrom(dataStream, 0, dataStream.Length, SocketFlags.None, ref mainEndPoint, ReceiveData, null);
+            MainSocket.BeginReceiveFrom(dataStream, 0, dataStream.Length, SocketFlags.None, ref MainEndPoint, ReceiveData, null);
         }
         catch (ObjectDisposedException)
         { }
         catch (Exception ex)
         {
-            Console.WriteLine("Receive Data: " + ex.Message);
+            Debug.Log("Receive Data: " + ex.Message);
         }
     }
-
         #endregion
-
 }

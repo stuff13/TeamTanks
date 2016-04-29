@@ -11,32 +11,38 @@ public abstract class PacketHandler : IPacketHandler
     //TODO: convert to dictionary keyed on object Id. Dictionary<int, Queue<Packet>> 
     // use id, get Queue, take the packets one by one from the list till they are empty
     // each id will be responsible for their own packets
-    protected List<Packet> Data;
-    protected EndPoint mainEndPoint;
+    protected Queue<Packet> UpdateData;      // These three collections are used to avoid calling Unity functions
+    protected Queue<Packet> CreateData;     // while on a background thread. It appears that Asynch Sockets calls
+    protected Queue<Packet> RemoveData;     // run some of them on another thread!
+    protected string CreateDataSynch = "createDataSynch";
+    protected string RemoveDataSynch = "removeDataSynch";
+    protected EndPoint MainEndPoint;
     protected readonly IUpdateObjects Updater;
-    protected Socket _socket;
+    protected Socket MainSocket;
 
     protected PacketHandler(IUpdateObjects updater)
     {
         Updater = updater;
-        Data = new List<Packet>();
+        UpdateData = new Queue<Packet>();
+        CreateData = new Queue<Packet>();
+        RemoveData = new Queue<Packet>();
     }
 
     protected abstract void ReceiveData(IAsyncResult asyncResult);
 
     public void SendPacket(Packet packet)
     {
-        if (mainEndPoint != null)
+        if (MainEndPoint != null)
         {
             try
             {
                 byte[] data = Packet.ToBytes(packet);
-                _socket.BeginSendTo(data, 0, data.Length, SocketFlags.None,
-                    mainEndPoint, SendData, mainEndPoint);
+                MainSocket.BeginSendTo(data, 0, data.Length, SocketFlags.None,
+                    MainEndPoint, SendData, MainEndPoint);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Send Error: " + ex.Message);
+                Debug.Log("Send Error: " + ex.Message);
             }
         }
     }
@@ -45,7 +51,7 @@ public abstract class PacketHandler : IPacketHandler
     {
         try
         {
-            _socket.EndSend(asyncResult);
+            MainSocket.EndSend(asyncResult);
         }
         catch (Exception ex)
         {
@@ -55,30 +61,31 @@ public abstract class PacketHandler : IPacketHandler
 
     public bool CheckAndHandleNewData()
     {
-        if (Data.Any())
+        try
         {
-            Packet newPacket;
-            newPacket = Data.First();
-            Data.RemoveAt(0);
+            if (UpdateData.Any())
+            {
+                var newPacket = UpdateData.Dequeue();
+                Updater.UpdatePacket(newPacket);
 
-            Debug.Log(String.Format("Received packet Rotation: x={0}, y={1}, z={2}",
-                newPacket.Rotation.x, newPacket.Rotation.y, newPacket.Rotation.z));
-            Debug.Log(String.Format("Received packet Location: x={0}, y={1}, z={2}",
-                newPacket.Location.x, newPacket.Location.y, newPacket.Location.z));
-            Updater.UpdatePacket(newPacket);
-
-            return true;
+                return true;
+            }
         }
-
+        catch (Exception ex)
+        {
+            Debug.Log("SendData Error: " + ex.Message);
+        }
         return false;
     }
 
     public virtual void Dispose()
     {
-        if (_socket != null)
+        if (MainSocket != null)
         {
-            _socket.Close();
+            MainSocket.Close();
         }
     }
 
+    public virtual bool CheckAndCreate() { return false; }
+    public virtual bool CheckAndRemove() { return false; }
 }
