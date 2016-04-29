@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Linq;
 
+using Assets.Scripts;
+
 public class Bullet : MonoBehaviour
 {
     private float Impulse = 1000;

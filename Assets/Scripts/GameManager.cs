@@ -7,11 +7,7 @@ namespace Assets.Scripts
         public static GameManager Instance;
         [SerializeField] private GameObject mainCamera = null;
         [SerializeField] private GameObject turretCamera = null;
-        //	[SerializeField] private GameObject turret = null;
-        //	[SerializeField] private float maxTurretRotation = 120.0f;
-        //	[SerializeField] private float maxGunAngle = 50.0f;   // angle from horizon
-        //	[SerializeField] private float turretSpeed = 2.0f;
-
+ 
         private bool isServer = false;
 
         public static bool IsServer { get { return Instance.isServer; } }

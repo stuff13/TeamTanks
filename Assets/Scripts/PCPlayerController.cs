@@ -9,16 +9,18 @@ public class PCPlayerController : MonoBehaviour
     [SerializeField] private float rotationSpeed = 20.0f;
     [SerializeField] private GameObject gun = null;
     [SerializeField] private float gunSpeed = 5.0f;
-	[SerializeField] private float networkFrameTime = 0.1f;
+	[SerializeField] private float networkFrameTime = 0.05f;
+
 
     private float _frameCount = 0;
     private int _numberOfFixedFrames = 0;
 
+    private float amountOfTimeSinceLastUpdate = 0;
     private GameObject objectToUpdate;
 
     void Start()
     {
-    	_numberOfFixedFrames = (int)(networkFrameTime / Time.fixedDeltaTime);
+    	// _numberOfFixedFrames = (int)(networkFrameTime / Time.fixedDeltaTime);
         objectToUpdate = GameManager.IsServer ? gameObject : gun;
     }
 
@@ -48,16 +50,13 @@ public class PCPlayerController : MonoBehaviour
             var targetQ = Quaternion.LookRotation(GameManager.Instance.Head.Gaze.direction);
             gun.transform.rotation = Quaternion.Slerp(gun.transform.rotation, targetQ, Time.deltaTime * gunSpeed);
         }
-    }
 
-    void FixedUpdate()
-    {
-    	// Time.deltaTime is constant in Fixed Update
-    	++_frameCount;
-        if (_frameCount > _numberOfFixedFrames)
+        amountOfTimeSinceLastUpdate += Time.deltaTime;
+        if (amountOfTimeSinceLastUpdate > networkFrameTime)
         {
-            _frameCount = 0;
             NetworkController.Instance.UpdateObjectLocations(objectToUpdate);
+            amountOfTimeSinceLastUpdate = 0;
         }
-    }
+	}
+
 }
