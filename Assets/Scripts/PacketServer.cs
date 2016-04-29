@@ -86,12 +86,6 @@ public class Server : PacketHandler
                         CreateData.Enqueue(receivedData);
                     }
                     break;
-                case Packet.PacketTypeEnum.Destroy:
-                    lock (RemoveDataSynch)
-                    {
-                        RemoveData.Enqueue(receivedData);
-                    }
-                    break;
             }
 
             if (receivedData.PacketType != Packet.PacketTypeEnum.Ack && receivedData.PacketType != Packet.PacketTypeEnum.LogOut)
@@ -116,7 +110,6 @@ public class Server : PacketHandler
             {
                 var newPacket = CreateData.Dequeue();
                 Updater.InsertBullet(newPacket);
-
                 return true;
             }
         }
@@ -124,20 +117,5 @@ public class Server : PacketHandler
         return false;
     }
 
-    public override bool CheckAndRemove()
-    {
-        lock (RemoveDataSynch)
-        {
-            if (RemoveData.Any())
-            {
-                var newPacket = RemoveData.Dequeue();
-                // Updater.RemoveBullet(newPacket);
-
-                return true;
-            }
-        }
-
-        return false;
-    }
     #endregion
 }

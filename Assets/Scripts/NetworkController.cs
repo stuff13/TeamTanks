@@ -80,11 +80,11 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
 
             while (_dataHandler.CheckAndHandleNewData()) { }
 	        while (_dataHandler.CheckAndCreate())        { }
-            while (_dataHandler.CheckAndRemove())        { }
+            //while (_dataHandler.CheckAndRemove())        { }
         }
         catch (Exception ex)
         {
-            Debug.Log("Start Error: " + ex.Message);
+            Debug.Log("Update Error: " + ex.Message);
         }
 
     }
@@ -110,7 +110,7 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
         }
         catch (Exception ex)
         {
-            Debug.Log("Start Error: " + ex.Message);
+            Debug.Log("UpdateObjectLocations Error: " + ex.Message);
         }
     }
 
@@ -129,7 +129,7 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
         }
         catch (Exception ex)
         {
-            Debug.Log("Start Error: " + ex.Message);
+            Debug.Log("UpdatePacket Error: " + ex.Message);
         }
     }
 
@@ -146,7 +146,7 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
         }
         catch (Exception ex)
         {
-            Debug.Log("Start Error: " + ex.Message);
+            Debug.Log("InsertObject Error: " + ex.Message);
         }
     }
 
@@ -161,40 +161,23 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
         }
         catch (Exception ex)
         {
-            Debug.Log("Start Error: " + ex.Message);
+            Debug.Log("InsertBullet Error: " + ex.Message);
         }
     }
 
+    // removes an object from the catalog so it no longer updates 
+    // listeners on the network about it
     public void RemoveObject(GameObject newObject)
     {
         try
         {
             int id = GameCatalog.FirstOrDefault(x => x.Value.name == newObject.name).Key;
             GameCatalog.Remove(id);
-
-            //var packet = new Packet
-            //{
-            //    PacketType = Packet.PacketTypeEnum.Destroy,
-            //    ObjectId = id
-            //};
-            // _dataHandler.SendPacket(packet);
         }
         catch (Exception ex)
         {
-            // todo check to see if this is an exception for an already deleted entry
-            // this will happen if method is called when the server's bullets contact anything
-            // this would not be counted as an 'Error'
-            Debug.Log("Start Error: " + ex.Message);
+            Debug.Log("RemoveObject Error: " + ex.Message);
         }
-    }
-
-    public void RemoveBullet(Packet packet)
-    {
-        // I don't need to remove the bullets. They will hit something and remove themselves
-        //GameObject objectToRemove = GameCatalog[packet.ObjectId];
-        //Instantiate(Resources.Load("ExplosionMobile"), objectToRemove.transform.position, objectToRemove.transform.rotation);
-        //GameCatalog.Remove(packet.ObjectId);
-        //Destroy(objectToRemove);
     }
 }
 
@@ -204,5 +187,4 @@ public interface IUpdateObjects
 {
 	void UpdatePacket(Packet thing);
     void InsertBullet(Packet packet);
-    void RemoveBullet(Packet packet);
 }

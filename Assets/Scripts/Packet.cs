@@ -17,7 +17,6 @@ public struct Packet
         Null,
         Update,
         Create,
-        Destroy,
         Login,
         LogOut,
         Fire,
