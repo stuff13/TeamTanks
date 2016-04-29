@@ -26,7 +26,7 @@ public class Client : PacketHandler
             IPEndPoint server = new IPEndPoint(serverIp, 30000);
             MainEndPoint = server;
 
-            Packet sendData = new Packet { DataId = Packet.DataIdentifier.Login };
+            Packet sendData = new Packet { PacketType = Packet.PacketTypeEnum.Login };
             byte[] data = Packet.ToBytes(sendData);
             MainSocket.BeginSendTo(data, 0, data.Length, SocketFlags.None, MainEndPoint, FinishSendingData, null);
 
@@ -45,7 +45,7 @@ public class Client : PacketHandler
         {
             if (MainSocket != null)
             {
-                Packet sendData = new Packet { DataId = Packet.DataIdentifier.LogOut, };
+                Packet sendData = new Packet { PacketType = Packet.PacketTypeEnum.LogOut, };
                 byte[] byteData = Packet.ToBytes(sendData);
 
                 MainSocket.SendTo(byteData, 0, byteData.Length, SocketFlags.None, MainEndPoint);
@@ -67,11 +67,11 @@ public class Client : PacketHandler
         {
             MainSocket.EndReceive(ar);
             Packet receivedData = new Packet(dataStream);
-            switch (receivedData.DataId)
+            switch (receivedData.PacketType)
             {
-                case Packet.DataIdentifier.Ack:
+                case Packet.PacketTypeEnum.Ack:
                     break;
-                case Packet.DataIdentifier.Update:
+                case Packet.PacketTypeEnum.Update:
                     UpdateData.Enqueue(receivedData);
                     Acknowledge(receivedData);
                     break;

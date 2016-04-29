@@ -12,7 +12,7 @@ public struct Packet
     // Description   -> |dataIdentifier|ObjectId|position|rotation| //     name   |    message   |
     // Size in bytes -> |       4      |   4    |   12   |   4    | // name length|message length|
 
-    public enum DataIdentifier
+    public enum PacketTypeEnum
     {
         Null,
         Update,
@@ -24,30 +24,67 @@ public struct Packet
         Ack
     }
 
-    public DataIdentifier DataId;
+    public PacketTypeEnum PacketType;
     public int ObjectId; // id mapped to name of object
-    public int MessageId;
+    public int PacketId;
 
-    public Vector3 Location; // current Location
-    // public Vector3 Velocity;    // current Velocity <== can I use this if I don't have full synchronisation on client and server
+    public Vector3 Position; // current Location
+    public Vector3 Velocity;    // current Velocity
+    public Vector3 Acceleration; // accelleration
     public Quaternion Rotation; // current orientation
-
-    // public int packetId;
+    public Vector3 AngularVelocity;
     // public Timestamp // what data type?
+
+    public Packet(GameObject gameObject, PacketTypeEnum packetType, int packetId, int objectId)
+    {
+        PacketType = packetType;
+        ObjectId = objectId;
+        PacketId = packetId;
+
+        // initialise vectors
+        Position = Vector3.zero;
+        Velocity = Vector3.zero;
+        Acceleration = Vector3.zero;
+        Rotation = Quaternion.identity;
+        AngularVelocity = Vector3.zero;
+
+        if (gameObject != null)
+        {
+            Position = gameObject.transform.localPosition;
+            Rotation = gameObject.transform.localRotation;
+            var rigidbody = gameObject.GetComponent<Rigidbody>();
+            if (rigidbody != null)
+            {
+                Velocity = rigidbody.velocity;
+                AngularVelocity = rigidbody.angularVelocity;
+            }
+        }
+    }
+
+
 
     public static void WriteToStream(Packet toWrite, Stream where)
     {
         BinaryWriter writer = new BinaryWriter(where);
-        writer.Write((Int32)toWrite.DataId);
+        writer.Write((Int32)toWrite.PacketType);
         writer.Write((Int32)toWrite.ObjectId);
-        writer.Write((Int32)toWrite.MessageId);
-        writer.Write(toWrite.Location.x);
-        writer.Write(toWrite.Location.y);
-        writer.Write(toWrite.Location.z);
+        writer.Write((Int32)toWrite.PacketId);
+        writer.Write(toWrite.Position.x);
+        writer.Write(toWrite.Position.y);
+        writer.Write(toWrite.Position.z);
+        writer.Write(toWrite.Velocity.x);
+        writer.Write(toWrite.Velocity.y);
+        writer.Write(toWrite.Velocity.z);
+        writer.Write(toWrite.Acceleration.x);
+        writer.Write(toWrite.Acceleration.y);
+        writer.Write(toWrite.Acceleration.z);
         writer.Write(toWrite.Rotation.x);
         writer.Write(toWrite.Rotation.y);
         writer.Write(toWrite.Rotation.z);
         writer.Write(toWrite.Rotation.w);
+        writer.Write(toWrite.AngularVelocity.x);
+        writer.Write(toWrite.AngularVelocity.y);
+        writer.Write(toWrite.AngularVelocity.z);
     }
 
     public static Packet ReadFromStream(Stream from)
@@ -63,15 +100,30 @@ public struct Packet
         x = reader.ReadSingle();
         y = reader.ReadSingle();
         z = reader.ReadSingle();
+        Vector3 velocity = new Vector3(x, y, z);
+        x = reader.ReadSingle();
+        y = reader.ReadSingle();
+        z = reader.ReadSingle();
+        Vector3 acceleration = new Vector3(x, y, z);
+        x = reader.ReadSingle();
+        y = reader.ReadSingle();
+        z = reader.ReadSingle();
         float w = reader.ReadSingle();
         Quaternion rotation = new Quaternion(x, y, z, w);
+        x = reader.ReadSingle();
+        y = reader.ReadSingle();
+        z = reader.ReadSingle();
+        Vector3 angularVelocity = new Vector3(x, y, z);
         return new Packet
                    {
-                       DataId = (DataIdentifier)dataId,
+                       PacketType = (PacketTypeEnum)dataId,
                        ObjectId = objectId,
-                       MessageId = messageId,
-                       Location = position,
-                       Rotation = rotation
+                       PacketId = messageId,
+                       Position = position,
+                       Velocity = velocity,
+                       Acceleration = acceleration,
+                       Rotation = rotation,
+                       AngularVelocity = angularVelocity
                    };
     }
 
@@ -93,16 +145,25 @@ public struct Packet
         MemoryStream stream = new MemoryStream(dataStream);
         BinaryReader reader = new BinaryReader(stream);
 
-        DataId = (DataIdentifier)reader.ReadInt32(); 
+        PacketType = (PacketTypeEnum)reader.ReadInt32(); 
         ObjectId = reader.ReadInt32();
-        MessageId = reader.ReadInt32();
-        Location.x = reader.ReadSingle();
-        Location.y = reader.ReadSingle();
-        Location.z = reader.ReadSingle();
+        PacketId = reader.ReadInt32();
+        Position.x = reader.ReadSingle();
+        Position.y = reader.ReadSingle();
+        Position.z = reader.ReadSingle();
+        Velocity.x = reader.ReadSingle();
+        Velocity.y = reader.ReadSingle();
+        Velocity.z = reader.ReadSingle();
+        Acceleration.x = reader.ReadSingle();
+        Acceleration.y = reader.ReadSingle();
+        Acceleration.z = reader.ReadSingle();
         Rotation.x = reader.ReadSingle();
         Rotation.y = reader.ReadSingle();
         Rotation.z = reader.ReadSingle();
         Rotation.w = reader.ReadSingle();
+        AngularVelocity.x = reader.ReadSingle();
+        AngularVelocity.y = reader.ReadSingle();
+        AngularVelocity.z = reader.ReadSingle();
     }
 
     // TODO: determine if this is a better approach to data conversion:

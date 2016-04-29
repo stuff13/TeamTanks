@@ -37,9 +37,9 @@ public abstract class PacketHandler : IPacketHandler
         {
             try
             {
-                if (packet.MessageId == 0)
+                if (packet.PacketId == 0)
                 {
-                    packet.MessageId = ++messageId;
+                    packet.PacketId = ++messageId;
                 }
                 byte[] data = Packet.ToBytes(packet);
                 MainSocket.BeginSendTo(data, 0, data.Length, SocketFlags.None,
@@ -87,12 +87,12 @@ public abstract class PacketHandler : IPacketHandler
     {
         Packet ackPacket = new Packet
                                {
-                                   DataId = Packet.DataIdentifier.Ack,
-                                   MessageId = packetToAcknowledge.MessageId,
+                                   PacketType = Packet.PacketTypeEnum.Ack,
+                                   PacketId = packetToAcknowledge.PacketId,
                                    ObjectId = packetToAcknowledge.ObjectId
                                };
         SendPacket(ackPacket);
-        Debug.Log("Acknowledging Packet #" +  packetToAcknowledge.MessageId);
+        Debug.Log("Acknowledging Packet #" +  packetToAcknowledge.PacketId);
     }
 
     public virtual void Dispose()

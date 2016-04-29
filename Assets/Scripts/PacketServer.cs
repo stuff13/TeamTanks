@@ -51,13 +51,13 @@ public class Server : PacketHandler
             EndPoint epSender = clients;
             MainSocket.EndReceiveFrom(asyncResult, ref epSender);
 
-            switch (receivedData.DataId)
+            switch (receivedData.PacketType)
             {
-                case Packet.DataIdentifier.Update:
+                case Packet.PacketTypeEnum.Update:
                     UpdateData.Enqueue(receivedData);
                     break;
 
-                case Packet.DataIdentifier.Login:
+                case Packet.PacketTypeEnum.Login:
                     // Populate client object
                     EndPoint client = epSender;
 
@@ -67,7 +67,7 @@ public class Server : PacketHandler
                     Debug.Log("Login from " + client);
                     break;
 
-                case Packet.DataIdentifier.LogOut:
+                case Packet.PacketTypeEnum.LogOut:
                     // Remove current client from list
                     foreach (EndPoint c in _clientList)
                     {
@@ -80,13 +80,13 @@ public class Server : PacketHandler
 
                     Debug.Log(string.Format("-- {0} has gone offline --", epSender));
                     break;
-                case Packet.DataIdentifier.Create:
+                case Packet.PacketTypeEnum.Create:
                     lock (CreateDataSynch)
                     {
                         CreateData.Enqueue(receivedData);
                     }
                     break;
-                case Packet.DataIdentifier.Destroy:
+                case Packet.PacketTypeEnum.Destroy:
                     lock (RemoveDataSynch)
                     {
                         RemoveData.Enqueue(receivedData);
@@ -94,7 +94,7 @@ public class Server : PacketHandler
                     break;
             }
 
-            if (receivedData.DataId != Packet.DataIdentifier.Ack && receivedData.DataId != Packet.DataIdentifier.LogOut)
+            if (receivedData.PacketType != Packet.PacketTypeEnum.Ack && receivedData.PacketType != Packet.PacketTypeEnum.LogOut)
             {
                 Acknowledge(receivedData);
             }
@@ -131,7 +131,7 @@ public class Server : PacketHandler
             if (RemoveData.Any())
             {
                 var newPacket = RemoveData.Dequeue();
-                Updater.RemoveBullet(newPacket);
+                // Updater.RemoveBullet(newPacket);
 
                 return true;
             }

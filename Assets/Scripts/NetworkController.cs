@@ -105,14 +105,7 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
             {
                 id = GameCatalog.First(x => x.Value.name == currentGameObject.name).Key;
             }
-            var packet = new Packet
-                             {
-                                 DataId = Packet.DataIdentifier.Update,
-                                 ObjectId = id,
-                                 Location = currentGameObject.transform.localPosition,
-                                 Rotation = currentGameObject.transform.localRotation,
-                             };
-
+            var packet = new Packet(currentGameObject, Packet.PacketTypeEnum.Update, 0, id);
             _dataHandler.SendPacket(packet);
         }
         catch (Exception ex)
@@ -130,7 +123,7 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
             GameObject target;
             if (GameCatalog.TryGetValue(updatedObject.ObjectId, out target))
             {
-                target.transform.localPosition = updatedObject.Location;
+                target.transform.localPosition = updatedObject.Position;
                 target.transform.localRotation = updatedObject.Rotation;
             }
         }
@@ -144,15 +137,11 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
     {
         try
         {
+            if (GameCatalog.Values.Contains(newObject)) return; // we've already done this
+
             int id = GameCatalog.Max(x => x.Key) + 1;
             GameCatalog.Add(id, newObject);
-            var packet = new Packet
-            {
-                DataId = Packet.DataIdentifier.Create,
-                ObjectId = id,
-                Location = newObject.transform.localPosition,
-                Rotation = newObject.transform.localRotation,
-            };
+            var packet = new Packet(newObject, Packet.PacketTypeEnum.Create, 0, id);
             _dataHandler.SendPacket(packet);
         }
         catch (Exception ex)
@@ -166,10 +155,7 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
         try
         {
             var gunScript = gun.GetComponent<Gun>();
-            GameObject newObject = gunScript.Fire(packet.Location, packet.Rotation);
-            //GameObject newObject = Instantiate(bullet);
-            //newObject.transform.position = packet.Location;
-            //newObject.transform.rotation = packet.Rotation;
+            GameObject newObject = gunScript.Fire(packet.Position, packet.Rotation);
 
             GameCatalog.Add(packet.ObjectId, newObject);
         }
@@ -183,18 +169,21 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
     {
         try
         {
-            int id = GameCatalog.First(x => x.Value.name == newObject.name).Key;
+            int id = GameCatalog.FirstOrDefault(x => x.Value.name == newObject.name).Key;
             GameCatalog.Remove(id);
 
-            var packet = new Packet
-            {
-                DataId = Packet.DataIdentifier.Destroy,
-                ObjectId = id
-            };
-            _dataHandler.SendPacket(packet);
+            //var packet = new Packet
+            //{
+            //    PacketType = Packet.PacketTypeEnum.Destroy,
+            //    ObjectId = id
+            //};
+            // _dataHandler.SendPacket(packet);
         }
         catch (Exception ex)
         {
+            // todo check to see if this is an exception for an already deleted entry
+            // this will happen if method is called when the server's bullets contact anything
+            // this would not be counted as an 'Error'
             Debug.Log("Start Error: " + ex.Message);
         }
     }
