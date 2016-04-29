@@ -30,15 +30,20 @@ public abstract class PacketHandler : IPacketHandler
 
     protected abstract void ReceiveData(IAsyncResult asyncResult);
 
+    private static int messageId;
     public void SendPacket(Packet packet)
     {
         if (MainEndPoint != null)
         {
             try
             {
+                if (packet.MessageId == 0)
+                {
+                    packet.MessageId = ++messageId;
+                }
                 byte[] data = Packet.ToBytes(packet);
                 MainSocket.BeginSendTo(data, 0, data.Length, SocketFlags.None,
-                    MainEndPoint, SendData, MainEndPoint);
+                    MainEndPoint, FinishSendingData, MainEndPoint);
             }
             catch (Exception ex)
             {
@@ -47,7 +52,7 @@ public abstract class PacketHandler : IPacketHandler
         }
     }
 
-    public void SendData(IAsyncResult asyncResult)
+    public void FinishSendingData(IAsyncResult asyncResult)
     {
         try
         {
@@ -76,6 +81,18 @@ public abstract class PacketHandler : IPacketHandler
             Debug.Log("SendData Error: " + ex.Message);
         }
         return false;
+    }
+
+    public void Acknowledge(Packet packetToAcknowledge)
+    {
+        Packet ackPacket = new Packet
+                               {
+                                   DataId = Packet.DataIdentifier.Ack,
+                                   MessageId = packetToAcknowledge.MessageId,
+                                   ObjectId = packetToAcknowledge.ObjectId
+                               };
+        SendPacket(ackPacket);
+        Debug.Log("Acknowledging Packet #" +  packetToAcknowledge.MessageId);
     }
 
     public virtual void Dispose()

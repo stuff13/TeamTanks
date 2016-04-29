@@ -28,7 +28,7 @@ public class Client : PacketHandler
 
             Packet sendData = new Packet { DataId = Packet.DataIdentifier.Login };
             byte[] data = Packet.ToBytes(sendData);
-            MainSocket.BeginSendTo(data, 0, data.Length, SocketFlags.None, MainEndPoint, SendData, null);
+            MainSocket.BeginSendTo(data, 0, data.Length, SocketFlags.None, MainEndPoint, FinishSendingData, null);
 
             dataStream = new byte[1024];
             MainSocket.BeginReceiveFrom(dataStream, 0, dataStream.Length, SocketFlags.None, ref MainEndPoint, ReceiveData, null);
@@ -67,7 +67,15 @@ public class Client : PacketHandler
         {
             MainSocket.EndReceive(ar);
             Packet receivedData = new Packet(dataStream);
-            UpdateData.Enqueue(receivedData);
+            switch (receivedData.DataId)
+            {
+                case Packet.DataIdentifier.Ack:
+                    break;
+                case Packet.DataIdentifier.Update:
+                    UpdateData.Enqueue(receivedData);
+                    Acknowledge(receivedData);
+                    break;
+            }
 
             // Reset data stream
             dataStream = new byte[1024];

@@ -94,6 +94,11 @@ public class Server : PacketHandler
                     break;
             }
 
+            if (receivedData.DataId != Packet.DataIdentifier.Ack && receivedData.DataId != Packet.DataIdentifier.LogOut)
+            {
+                Acknowledge(receivedData);
+            }
+
             // Listen for more connections again...
             MainSocket.BeginReceiveFrom(_dataStream, 0, _dataStream.Length, SocketFlags.None, ref epSender, ReceiveData, epSender);
         }
