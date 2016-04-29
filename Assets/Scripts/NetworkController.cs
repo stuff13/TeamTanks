@@ -8,6 +8,7 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
 {
     public static NetworkController Instance { get; private set; }
 
+    [SerializeField] private GameObject gun = null;
     [SerializeField] private GameObject bullet = null;
     public Dictionary<int, GameObject> GameCatalog { get; private set; }
 
@@ -164,9 +165,11 @@ public class NetworkController : MonoBehaviour, IUpdateObjects
     {
         try
         {
-            GameObject newObject = Instantiate(bullet);
-            newObject.transform.position = packet.Location;
-            newObject.transform.rotation = packet.Rotation;
+            var gunScript = gun.GetComponent<Gun>();
+            GameObject newObject = gunScript.Fire(packet.Location, packet.Rotation);
+            //GameObject newObject = Instantiate(bullet);
+            //newObject.transform.position = packet.Location;
+            //newObject.transform.rotation = packet.Rotation;
 
             GameCatalog.Add(packet.ObjectId, newObject);
         }

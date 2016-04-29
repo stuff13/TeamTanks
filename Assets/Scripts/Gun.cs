@@ -14,9 +14,14 @@ public class Gun : MonoBehaviour {
 	{
 		if (Cardboard.SDK.VRModeEnabled && Cardboard.SDK.Triggered)
 		{
-			// fire
-			Vector3 spawnVector = new Vector3(spawnPoint.position.x, spawnPoint.position.y, spawnPoint.position.z);
-			Instantiate(projectile, spawnVector, spawnPoint.rotation);
+		    Fire(spawnPoint.position, spawnPoint.rotation);
 		}
 	}
+
+    public GameObject Fire(Vector3 position, Quaternion rotation)
+    {
+        Vector3 spawnVector = new Vector3(position.x, position.y, position.z);
+        Transform bulletTransform = Instantiate(projectile, spawnVector, rotation) as Transform;
+        return bulletTransform != null ? bulletTransform.gameObject : null;
+    }
 }
