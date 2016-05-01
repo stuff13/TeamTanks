@@ -95,8 +95,17 @@ namespace Assets.Scripts
 
         public void SetNextTarget() // for tank
         {
-            TargetPosition = History[0].Item.Position + History[0].Item.Velocity * _intendedFrameTime;
-            TargetRotation = History[0].Item.Rotation * Quaternion.Euler(0, History[0].Item.AngularVelocity.y * _intendedFrameTime, 0);
+        	if(History[0].Item.Position == Vector3.zero) { return; }
+
+        	int lastItem = History.Count - 1;
+			TargetPosition = History[lastItem].Item.Position + History[lastItem].Item.Velocity * _intendedFrameTime;
+			TargetRotation = History[lastItem].Item.Rotation * Quaternion.Euler(0, History[lastItem].Item.AngularVelocity.y * _intendedFrameTime, 0);
+
+            if(Id == 1)
+            {
+//            	Debug.Log(String.Format("Target Position set to x={0}, y={1}, z={2}", TargetPosition.x, TargetPosition.y, TargetPosition.z));
+				Debug.Log(String.Format("Target Velocity set to x={0}, y={1}, z={2}", History[lastItem].Item.Velocity.x, History[lastItem].Item.Velocity.y, History[lastItem].Item.Velocity.z));
+            }
         }
     }
 }

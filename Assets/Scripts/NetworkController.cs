@@ -146,10 +146,11 @@ namespace Assets.Scripts
                 ObjectHistory target;
                 if (GameCatalog.TryGetValue(updatedObject.ObjectId, out target)) // we have to check for it as this object may no longer exist
                 {
-                    Vector3 alternate = GetNextPosition(updatedObject);
+                    // Vector3 alternate = GetNextPosition(updatedObject);
 
                     if (updatedObject.ObjectId != 1)    // we are updating the tank with dead reckoning
                     {
+                        // TODO: remove these lines and allow position to be updated from the target for the next network frame
                         target.UnityObject.transform.localPosition = updatedObject.Position;
                         target.UnityObject.transform.localRotation = updatedObject.Rotation;
                     }
@@ -176,13 +177,13 @@ namespace Assets.Scripts
             ObjectHistory history;
             if (GameCatalog.TryGetValue(updatedObject.PacketId, out history))   // no point updating an object that no longer exists
             {
-                Rigidbody rigidbody = history.UnityObject.GetComponent<Rigidbody>();
+                Rigidbody historicalBody = history.UnityObject.GetComponent<Rigidbody>();
 
                 if (history.History.Count == 0) // there are no packets saved
                 {
-                    if (rigidbody != null)
+                    if (historicalBody != null)
                     {
-                        return rigidbody.velocity * parametricTime + history.UnityObject.transform.position;
+                        return historicalBody.velocity * parametricTime + history.UnityObject.transform.position;
                     }
 
                     return history.UnityObject.transform.position;
@@ -192,7 +193,7 @@ namespace Assets.Scripts
                     
                 }
 
-                Vector3 p0prime = history.History.Last().Item.Position;
+                // Vector3 p0prime = history.History.Last().Item.Position;
 
                 // Vector3 v0 = history.UnityObject.
                 // Vp = V0 + (V'0 - V0) Tp

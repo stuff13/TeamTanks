@@ -25,7 +25,7 @@ namespace Assets.Scripts
             IsAcknowledged = true;
             RoundTrip = DateTime.Now - Time;
 
-            // TODO: do we need to get rid of any here? e.g. any previously acknowledged packet?
+            // TODO: do we need to get rid of anything here? e.g. any previously acknowledged packet?
         }
     }
 }

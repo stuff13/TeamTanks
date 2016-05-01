@@ -45,7 +45,7 @@ namespace Assets.Scripts
                 }
                 catch (Exception ex)
                 {
-                    Debug.Log("Send Error: " + ex.Message);
+					Debug.Log("SendPacket Error: " + ex.Message);
                 }
             }
         }
@@ -58,7 +58,7 @@ namespace Assets.Scripts
             }
             catch (Exception ex)
             {
-                Debug.Log("SendData Error: " + ex.Message);
+				Debug.Log("FinishSendingData Error: " + ex.Message);
             }
         }
 
@@ -76,7 +76,7 @@ namespace Assets.Scripts
             }
             catch (Exception ex)
             {
-                Debug.Log("SendData Error: " + ex.Message);
+				Debug.Log("CheckAndHandleNewData Error: " + ex.Message);
             }
             return false;
         }

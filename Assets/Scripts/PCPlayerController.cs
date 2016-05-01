@@ -1,6 +1,6 @@
-﻿using Assets.Scripts;
-
+﻿using System.Linq;
 using UnityEngine;
+using Assets.Scripts;
 
 public class PCPlayerController : MonoBehaviour
 {
@@ -11,10 +11,6 @@ public class PCPlayerController : MonoBehaviour
     [SerializeField] private float gunSpeed = 5.0f;
 	[SerializeField] private float networkFrameTime = 0.2f;
 
-
-    private float _frameCount = 0;
-    private int _numberOfFixedFrames = 0;
-
     private float amountOfTimeSinceLastUpdate = 0;
     private GameObject objectToUpdate;
 
@@ -24,7 +20,6 @@ public class PCPlayerController : MonoBehaviour
 
     void Start()
     {
-    	// _numberOfFixedFrames = (int)(networkFrameTime / Time.fixedDeltaTime);
         objectToUpdate = GameManager.IsServer ? gameObject : gun;
     }
 
@@ -54,8 +49,11 @@ public class PCPlayerController : MonoBehaviour
 
             // adjust tank position
             ObjectHistory tankHistory = NetworkController.Instance.GameCatalog[TankId];
-            transform.position = Vector3.Lerp(transform.position, tankHistory.TargetPosition, amountOfTimeSinceLastUpdate);
-            transform.rotation = Quaternion.Slerp(transform.rotation, tankHistory.TargetRotation, amountOfTimeSinceLastUpdate);
+            if(tankHistory.History.Any())
+            {
+            	transform.position = Vector3.Lerp(transform.position, tankHistory.TargetPosition, amountOfTimeSinceLastUpdate);
+            	transform.rotation = Quaternion.Slerp(transform.rotation, tankHistory.TargetRotation, amountOfTimeSinceLastUpdate);
+            }
         }
 
         if (amountOfTimeSinceLastUpdate > networkFrameTime)

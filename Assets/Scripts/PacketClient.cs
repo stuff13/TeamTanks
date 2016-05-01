@@ -9,7 +9,7 @@ namespace Assets.Scripts
     public class Client : PacketHandler
     {
         #region Private Members
-        protected string ServerIpAddress = "192.168.2.42";
+        protected string ServerIpAddress = "192.168.173.1";
         private byte[] _dataStream = new byte[1024];
 
         #endregion
