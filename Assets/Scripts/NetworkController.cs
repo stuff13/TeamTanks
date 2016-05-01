@@ -7,6 +7,12 @@ using UnityEngine;
 
 namespace Assets.Scripts
 {
+    public interface IUpdateObjects
+    {
+        void UpdatePacket(Packet thing);
+        void InsertBullet(Packet packet);
+    }
+
     public class NetworkController : MonoBehaviour, IUpdateObjects
     {
         public static NetworkController Instance { get; private set; }
@@ -269,13 +275,5 @@ namespace Assets.Scripts
 
             return objectsHandledOnServer.Contains(objectId);
         }
-    }
-
-
-
-    public interface IUpdateObjects
-    {
-        void UpdatePacket(Packet thing);
-        void InsertBullet(Packet packet);
     }
 }

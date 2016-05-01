@@ -59,17 +59,13 @@ namespace Assets.Scripts
                         break;
 
                     case Packet.PacketTypeEnum.Login:
-                        // Populate client object
                         EndPoint client = epSender;
-
-                        // Add client to list
                         _clientList.Add(client);
                         MainEndPoint = _clientList[0];
                         Debug.Log("Login from " + client);
                         break;
 
                     case Packet.PacketTypeEnum.LogOut:
-                        // Remove current client from list
                         foreach (EndPoint c in _clientList)
                         {
                             if (c.Equals(epSender))

@@ -9,8 +9,8 @@ namespace Assets.Scripts
     public class Client : PacketHandler
     {
         #region Private Members
-        protected string serverIpAddress = "192.168.2.42";
-        private byte[] dataStream = new byte[1024];
+        protected string ServerIpAddress = "192.168.2.42";
+        private byte[] _dataStream = new byte[1024];
 
         #endregion
 
@@ -24,7 +24,7 @@ namespace Assets.Scripts
             try
             {
                 MainSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-                IPAddress serverIp = IPAddress.Parse(serverIpAddress);
+                IPAddress serverIp = IPAddress.Parse(ServerIpAddress);
                 IPEndPoint server = new IPEndPoint(serverIp, 30000);
                 MainEndPoint = server;
 
@@ -32,8 +32,8 @@ namespace Assets.Scripts
                 byte[] data = Packet.ToBytes(sendData);
                 MainSocket.BeginSendTo(data, 0, data.Length, SocketFlags.None, MainEndPoint, FinishSendingData, null);
 
-                dataStream = new byte[1024];
-                MainSocket.BeginReceiveFrom(dataStream, 0, dataStream.Length, SocketFlags.None, ref MainEndPoint, ReceiveData, null);
+                _dataStream = new byte[1024];
+                MainSocket.BeginReceiveFrom(_dataStream, 0, _dataStream.Length, SocketFlags.None, ref MainEndPoint, ReceiveData, null);
             }
             catch (Exception ex)
             {
@@ -68,7 +68,7 @@ namespace Assets.Scripts
             try
             {
                 MainSocket.EndReceive(ar);
-                Packet receivedData = new Packet(dataStream);
+                Packet receivedData = new Packet(_dataStream);
                 switch (receivedData.PacketType)
                 {
                     case Packet.PacketTypeEnum.Ack:
@@ -80,8 +80,8 @@ namespace Assets.Scripts
                 }
 
                 // Reset data stream
-                dataStream = new byte[1024];
-                MainSocket.BeginReceiveFrom(dataStream, 0, dataStream.Length, SocketFlags.None, ref MainEndPoint, ReceiveData, null);
+                _dataStream = new byte[1024];
+                MainSocket.BeginReceiveFrom(_dataStream, 0, _dataStream.Length, SocketFlags.None, ref MainEndPoint, ReceiveData, null);
             }
             catch (ObjectDisposedException)
             { }
