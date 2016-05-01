@@ -17,10 +17,12 @@ public class PCPlayerController : MonoBehaviour
     private const float epsilon = 0.0001f;
 
     private const int TankId = 1;
+    private AudioSource movementSounds = null;
 
     void Start()
     {
         objectToUpdate = GameManager.IsServer ? gameObject : gun;
+        movementSounds = gameObject.GetComponent<AudioSource>();
     }
 
     void Update ()
@@ -41,6 +43,15 @@ public class PCPlayerController : MonoBehaviour
 	        {
 	            transform.Rotate(Vector3.up * rotation * rotationSpeed * Time.deltaTime);
 	        }
+
+			if(Mathf.Abs(movement) > epsilon || Mathf.Abs(rotation) > epsilon)
+			{
+				movementSounds.Play();
+			}
+			else
+			{
+				movementSounds.Stop();
+			}
 	    }
 	    else
 	    {
