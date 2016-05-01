@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 using UnityEngine;
@@ -11,6 +12,11 @@ namespace Assets.Scripts
         public List<HistoricalPacket> History { get; private set; }
         public GameObject UnityObject { get; private set; }
         public int Id { get; private set; }
+
+        public Vector3 TargetPosition { get; set; }
+        public Quaternion TargetRotation { get; set; }
+
+        private float _intendedFrameTime = 0.2f;
 
         public ObjectHistory(GameObject unityObject, int id)
         {
@@ -36,6 +42,20 @@ namespace Assets.Scripts
         public void AddHistoricalPacket(Packet newItem)
         {
             int index = History.FindIndex(x => x.GetPacketId > newItem.PacketId);
+
+            if (index == History.Count && History.Any() && newItem.ObjectId == 1)     // this is the latest packet for the tank and there is at least ONE already there
+            {
+                HistoricalPacket lastFrame = History[index - 1];
+                float timePassed = (float)((DateTime.Now - lastFrame.Time).TotalSeconds);
+                Vector3 velocity = newItem.Position - lastFrame.Item.Position / timePassed;
+
+                Vector3 netEulerRotation = newItem.Rotation.eulerAngles - lastFrame.Item.Rotation.eulerAngles;
+                Vector3 angularVelocity = netEulerRotation / timePassed;
+
+                newItem.Velocity = velocity;
+                newItem.AngularVelocity = angularVelocity;
+            }
+
             if (index == -1)
             {
                 History.Add(new HistoricalPacket(newItem));
@@ -49,6 +69,8 @@ namespace Assets.Scripts
             {
                 History.RemoveAt(0);    // take away the first one
             }
+
+            SetNextTarget();
         }
 
         public void AcknowledgePacket(int packetId)
@@ -69,6 +91,12 @@ namespace Assets.Scripts
             HistoricalPacket packet = History.FindLast(x => x.IsAcknowledged);
 
             return packet; 
+        }
+
+        public void SetNextTarget() // for tank
+        {
+            TargetPosition = History[0].Item.Position + History[0].Item.Velocity * _intendedFrameTime;
+            TargetRotation = History[0].Item.Rotation * Quaternion.Euler(0, History[0].Item.AngularVelocity.y * _intendedFrameTime, 0);
         }
     }
 }

@@ -10,14 +10,11 @@ namespace Assets.Scripts
 {
     public abstract class PacketHandler : IPacketHandler
     {
-        //TODO: convert to dictionary keyed on object Id. Dictionary<int, Queue<Packet>> 
-        // use id, get Queue, take the packets one by one from the list till they are empty
-        // each id will be responsible for their own packets
-        protected Queue<Packet> UpdateData;      // These three collections are used to avoid calling Unity functions
+        protected Queue<Packet> UpdateData;      // These two collections are used to avoid calling Unity functions
         protected Queue<Packet> CreateData;     // while on a background thread. It appears that Asynch Sockets calls
-        protected Queue<Packet> RemoveData;     // run some of them on another thread!
+                                                // run some of them on another thread!
         protected string CreateDataSynch = "createDataSynch";
-        protected string RemoveDataSynch = "removeDataSynch";
+        protected string UpdateDataSynch = "updateDataSynch";   // TODO needs to be applied to lock the Update queue
         protected EndPoint MainEndPoint;
         protected readonly IUpdateObjects Updater;
         protected Socket MainSocket;
@@ -27,7 +24,6 @@ namespace Assets.Scripts
             Updater = updater;
             UpdateData = new Queue<Packet>();
             CreateData = new Queue<Packet>();
-            RemoveData = new Queue<Packet>();
         }
 
         protected abstract void ReceiveData(IAsyncResult asyncResult);
@@ -94,7 +90,6 @@ namespace Assets.Scripts
                                        ObjectId = packetToAcknowledge.ObjectId
                                    };
             SendPacket(ackPacket);
-            Debug.Log("Acknowledging Packet #" +  packetToAcknowledge.PacketId);
         }
 
         public virtual void Dispose()

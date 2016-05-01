@@ -7,6 +7,12 @@ using UnityEngine;
 
 namespace Assets.Scripts
 {
+    public interface IUpdateObjects
+    {
+        void UpdatePacket(Packet thing);
+        void InsertBullet(Packet packet);
+    }
+
     public class NetworkController : MonoBehaviour, IUpdateObjects
     {
         public static NetworkController Instance { get; private set; }
@@ -134,8 +140,9 @@ namespace Assets.Scripts
                 ObjectHistory target;
                 if (GameCatalog.TryGetValue(updatedObject.ObjectId, out target)) // we have to check for it as this object may no longer exist
                 {
-                    Vector3 alternate = GetNextPosition(updatedObject);
+                    // Vector3 alternate = GetNextPosition(updatedObject);
 
+                    // TODO: remove these lines and allow position to be updated from the target for the next network frame
                     target.UnityObject.transform.localPosition = updatedObject.Position;
                     target.UnityObject.transform.localRotation = updatedObject.Rotation;
 
@@ -177,7 +184,7 @@ namespace Assets.Scripts
                     
                 }
 
-                Vector3 p0prime = history.History.Last().Item.Position;
+                // Vector3 p0prime = history.History.Last().Item.Position;
 
                 // Vector3 v0 = history.UnityObject.
                 // Vp = V0 + (V'0 - V0) Tp
@@ -269,13 +276,5 @@ namespace Assets.Scripts
 
             return objectsHandledOnServer.Contains(objectId);
         }
-    }
-
-
-
-    public interface IUpdateObjects
-    {
-        void UpdatePacket(Packet thing);
-        void InsertBullet(Packet packet);
     }
 }
