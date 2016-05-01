@@ -136,14 +136,23 @@ namespace Assets.Scripts
         public void UpdatePacket(Packet updatedObject)
         {
             try
-            { 
+            {
+                if (IsServerObject(updatedObject.ObjectId) == _isServer)    // we shouldn't be getting server objects over the network to the server
+                {
+                    Debug.Log("wrong object reported across network: " + updatedObject.ObjectId);
+                    return;
+                }
+
                 ObjectHistory target;
                 if (GameCatalog.TryGetValue(updatedObject.ObjectId, out target)) // we have to check for it as this object may no longer exist
                 {
                     Vector3 alternate = GetNextPosition(updatedObject);
 
-                    target.UnityObject.transform.localPosition = updatedObject.Position;
-                    target.UnityObject.transform.localRotation = updatedObject.Rotation;
+                    if (updatedObject.ObjectId != 1)    // we are updating the tank with dead reckoning
+                    {
+                        target.UnityObject.transform.localPosition = updatedObject.Position;
+                        target.UnityObject.transform.localRotation = updatedObject.Rotation;
+                    }
 
                     target.AddHistoricalPacket(updatedObject);
                 }
