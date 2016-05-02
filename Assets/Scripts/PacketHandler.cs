@@ -31,7 +31,7 @@ namespace Assets.Scripts
         private static int messageId;
         public void SendPacket(Packet packet)
         {
-            if (MainEndPoint != null)
+            if (IsConnected())
             {
                 try
                 {
@@ -48,6 +48,11 @@ namespace Assets.Scripts
 					Debug.Log("SendPacket Error: " + ex.Message);
                 }
             }
+        }
+
+        public bool IsConnected()
+        {
+            return MainEndPoint != null;
         }
 
         public void FinishSendingData(IAsyncResult asyncResult)

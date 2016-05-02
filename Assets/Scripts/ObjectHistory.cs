@@ -100,12 +100,12 @@ namespace Assets.Scripts
         	int lastItem = History.Count - 1;
 			TargetPosition = History[lastItem].Item.Position + History[lastItem].Item.Velocity * _intendedFrameTime;
 			TargetRotation = History[lastItem].Item.Rotation * Quaternion.Euler(0, History[lastItem].Item.AngularVelocity.y * _intendedFrameTime, 0);
-
-            if(Id == 1)
-            {
-//            	Debug.Log(String.Format("Target Position set to x={0}, y={1}, z={2}", TargetPosition.x, TargetPosition.y, TargetPosition.z));
-				Debug.Log(String.Format("Target Velocity set to x={0}, y={1}, z={2}", History[lastItem].Item.Velocity.x, History[lastItem].Item.Velocity.y, History[lastItem].Item.Velocity.z));
-            }
+             
+//            if(Id == 1)
+//            {
+////            	Debug.Log(String.Format("Target Position set to x={0}, y={1}, z={2}", TargetPosition.x, TargetPosition.y, TargetPosition.z));
+//				Debug.Log(String.Format("Target Velocity set to x={0}, y={1}, z={2}", History[lastItem].Item.Velocity.x, History[lastItem].Item.Velocity.y, History[lastItem].Item.Velocity.z));
+//            }
         }
     }
 }

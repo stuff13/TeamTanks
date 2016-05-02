@@ -113,14 +113,17 @@ namespace Assets.Scripts
         public void UpdateObjectLocations(GameObject currentGameObject, int id = 0)
         {
             try
-            { 
-                if (id == 0)
+            {
+                if (_dataHandler.IsConnected())
                 {
-                    id = GameCatalog.First(x => x.Value.UnityObject.name == currentGameObject.name).Key;
+                    if (id == 0)
+                    {
+                        id = GameCatalog.First(x => x.Value.UnityObject.name == currentGameObject.name).Key;
+                    }
+                    var packet = new Packet(currentGameObject, Packet.PacketTypeEnum.Update, 0, id);
+                    _dataHandler.SendPacket(packet);
+                    GameCatalog[id].AddHistoricalPacket(packet);
                 }
-                var packet = new Packet(currentGameObject, Packet.PacketTypeEnum.Update, 0, id);
-                _dataHandler.SendPacket(packet);
-                GameCatalog[id].AddHistoricalPacket(packet);
             }
             catch (Exception ex)
             {
@@ -164,54 +167,51 @@ namespace Assets.Scripts
             }
         }
 
-        private float _timeSinceLastUpdateMs = 0.0f;
-        private Vector3 GetNextPosition(Packet updatedObject)
-        {
-            // figure out deltatime based on total time between updates and time since last update
-            // Tp = Tt / Tdelta; Tdelta is time per update, Tt is Time since last update
-            _timeSinceLastUpdateMs += Time.deltaTime * 1000;
-            float timePerUpdate = TimePerUpdateMs;
-            float parametricTime = _timeSinceLastUpdateMs / timePerUpdate;
+        // private float _timeSinceLastUpdateMs = 0.0f;
+        //private Vector3 GetNextPosition(Packet updatedObject)
+        //{
+        //    // figure out deltatime based on total time between updates and time since last update
+        //    // Tp = Tt / Tdelta; Tdelta is time per update, Tt is Time since last update
+        //    _timeSinceLastUpdateMs += Time.deltaTime * 1000;
+        //    float timePerUpdate = TimePerUpdateMs;
+        //    float parametricTime = _timeSinceLastUpdateMs / timePerUpdate;
 
-            // get last reported position : HistoricalPacket
-            ObjectHistory history;
-            if (GameCatalog.TryGetValue(updatedObject.PacketId, out history))   // no point updating an object that no longer exists
-            {
-                Rigidbody historicalBody = history.UnityObject.GetComponent<Rigidbody>();
+        //    // get last reported position : HistoricalPacket
+        //    ObjectHistory history;
+        //    if (GameCatalog.TryGetValue(updatedObject.PacketId, out history))   // no point updating an object that no longer exists
+        //    {
+        //        Rigidbody historicalBody = history.UnityObject.GetComponent<Rigidbody>();
 
-                if (history.History.Count == 0) // there are no packets saved
-                {
-                    if (historicalBody != null)
-                    {
-                        return historicalBody.velocity * parametricTime + history.UnityObject.transform.position;
-                    }
+        //        if (history.History.Count == 0) // there are no packets saved
+        //        {
+        //            if (historicalBody != null)
+        //            {
+        //                return historicalBody.velocity * parametricTime + history.UnityObject.transform.position;
+        //            }
 
-                    return history.UnityObject.transform.position;
-                }
-                if (history.History.Count == 1)
-                {
+        //            return history.UnityObject.transform.position;
+        //        }
+        //        if (history.History.Count == 1)
+        //        {
                     
-                }
+        //        }
 
-                // Vector3 p0prime = history.History.Last().Item.Position;
+        //        // Vector3 p0prime = history.History.Last().Item.Position;
 
-                // Vector3 v0 = history.UnityObject.
-                // Vp = V0 + (V'0 - V0) Tp
-                // Vector3 vp = 
-                // calculate P0' from velocity 
+        //        // Vector3 v0 = history.UnityObject.
+        //        // Vp = V0 + (V'0 - V0) Tp
+        //        // Vector3 vp = 
+        //        // calculate P0' from velocity 
 
-                // P0: get game position
+        //        // P0: get game position
 
-                // Pt' = P0' + V'0 * deltatime
-                // Pt = P0 + Vp * deltatime
+        //        // Pt' = P0' + V'0 * deltatime
+        //        // Pt = P0 + Vp * deltatime
 
-                // Qt = Pt + (P't - Pt)* Tp
-            }
-
-
-
-            return Vector3.zero;
-        }
+        //        // Qt = Pt + (P't - Pt)* Tp
+        //    }
+        //    return Vector3.zero;
+        //}
 
         public void InsertObject(GameObject newObject)
         {

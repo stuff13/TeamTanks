@@ -7,4 +7,6 @@ public interface IPacketHandler : IDisposable
     bool CheckAndHandleNewData();
     bool CheckAndCreate();
     void SendPacket(Packet packet);
+
+    bool IsConnected();
 }

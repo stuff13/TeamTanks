@@ -32,27 +32,18 @@ public class PCPlayerController : MonoBehaviour
         if (GameManager.IsServer)
 	    {
 	        float movement = Input.GetAxis("Forward");
-	        float rotation = Input.GetAxis("Right");
+	        float rotation = Input.GetAxis("Right"); 
 
-	        if (Mathf.Abs(movement) > epsilon)
-	        {
-	            transform.position += transform.forward * movement * speed * Time.deltaTime;
-	        }
+            if (Mathf.Abs(movement) > epsilon)
+            {
+                transform.position += transform.forward * movement * speed * Time.deltaTime;
+            } 
 
-	        if (Mathf.Abs(rotation) > epsilon)
-	        {
-	            transform.Rotate(Vector3.up * rotation * rotationSpeed * Time.deltaTime);
-	        }
-
-			if(Mathf.Abs(movement) > epsilon || Mathf.Abs(rotation) > epsilon)
-			{
-				movementSounds.Play();
-			}
-			else
-			{
-				movementSounds.Stop();
-			}
-	    }
+            if (Mathf.Abs(rotation) > epsilon)
+            {
+                transform.Rotate(Vector3.up * rotation * rotationSpeed * Time.deltaTime);
+            }
+        }
 	    else
 	    {
             var targetQ = Quaternion.LookRotation(GameManager.Instance.Head.Gaze.direction);
@@ -67,7 +58,7 @@ public class PCPlayerController : MonoBehaviour
             }
         }
 
-        if (amountOfTimeSinceLastUpdate > networkFrameTime)
+       // if (amountOfTimeSinceLastUpdate > networkFrameTime)
         {
             NetworkController.Instance.UpdateObjectLocations(objectToUpdate);
             amountOfTimeSinceLastUpdate = 0;
